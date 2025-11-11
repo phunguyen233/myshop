@@ -10,6 +10,10 @@ export const productAPI = {
     const res = await axiosClient.post("/products", data);
     return res.data;
   },
+  update: async (id: number, data: Product) => {
+    const res = await axiosClient.put(`/products/${id}`, data);
+    return res.data;
+  },
   delete: async (id: number) => {
     const res = await axiosClient.delete(`/products/${id}`);
     return res.data;

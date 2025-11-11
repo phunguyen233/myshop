@@ -1,21 +1,22 @@
-import mysql from "mysql2";
+import mysql from "mysql2/promise";
 import dotenv from "dotenv";
 
 dotenv.config();
 
-const db = mysql.createConnection({
-  host: process.env.DB_HOST,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASS,
-  database: process.env.DB_NAME,
+const pool = mysql.createPool({
+  host: process.env.DB_HOST || 'localhost',
+  user: process.env.DB_USER || 'root',
+  password: process.env.DB_PASS || '123456',
+  database: process.env.DB_NAME || 'quanlycuahang',
+  waitForConnections: true,
+  connectionLimit: 10,
+  queueLimit: 0,
 });
 
-db.connect((err) => {
-  if (err) {
-    console.error("❌ Kết nối MySQL thất bại:", err);
-  } else {
-    console.log("✅ Kết nối MySQL thành công!");
-  }
+pool.on('error', (err) => {
+  console.error("❌ Lỗi kết nối pool:", err);
 });
 
-export default db;
+console.log("✅ MySQL Pool đã khởi tạo!");
+
+export default pool;

@@ -1,8 +1,9 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import Sidebar from "./components/Sidebar";
 import Header from "./components/Header";
+import Dashboard from "./pages/Dashboard";
 import Products from "./pages/Products";
-import AddProduct from "./pages/AddProduct";
+import Customers from "./pages/Customers";
 
 function App() {
   return (
@@ -12,9 +13,10 @@ function App() {
         <div className="flex-1">
           <Header />
           <Routes>
-            <Route path="/" element={<Products />} />
+            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/" element={<Dashboard />} />
             <Route path="/products" element={<Products />} />
-            <Route path="/add-product" element={<AddProduct />} />
+            <Route path="/customers" element={<Customers />} />
           </Routes>
         </div>
       </div>
