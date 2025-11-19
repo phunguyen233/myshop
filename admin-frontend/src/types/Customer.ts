@@ -1,6 +1,7 @@
 export interface Customer {
   ma_khach_hang: number;
-  ten_khach_hang: string;
-  sdt: string;
-  dia_chi: string;
+  ho_ten: string;
+  nam_sinh?: number | null;
+  dia_chi?: string | null;
+  ma_tai_khoan?: number | null;
 }

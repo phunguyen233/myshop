@@ -11,10 +11,10 @@ export const getCustomers = async (req, res) => {
 
 export const addCustomer = async (req, res) => {
   try {
-    const { ten_khach_hang, sdt, dia_chi } = req.body;
+    const { ho_ten, nam_sinh, dia_chi, ma_tai_khoan } = req.body;
     await db.query(
-      "INSERT INTO khachhang (ten_khach_hang, sdt, dia_chi) VALUES (?, ?, ?)",
-      [ten_khach_hang, sdt, dia_chi]
+      "INSERT INTO khachhang (ho_ten, nam_sinh, dia_chi, ma_tai_khoan) VALUES (?, ?, ?, ?)",
+      [ho_ten, nam_sinh || null, dia_chi || null, ma_tai_khoan || null]
     );
     res.status(201).json({ message: "Thêm khách hàng thành công" });
   } catch {
@@ -25,10 +25,10 @@ export const addCustomer = async (req, res) => {
 export const updateCustomer = async (req, res) => {
   try {
     const { id } = req.params;
-    const { ten_khach_hang, sdt, dia_chi } = req.body;
+    const { ho_ten, nam_sinh, dia_chi, ma_tai_khoan } = req.body;
     await db.query(
-      "UPDATE khachhang SET ten_khach_hang=?, sdt=?, dia_chi=? WHERE ma_khach_hang=?",
-      [ten_khach_hang, sdt, dia_chi, id]
+      "UPDATE khachhang SET ho_ten=?, nam_sinh=?, dia_chi=?, ma_tai_khoan=? WHERE ma_khach_hang=?",
+      [ho_ten, nam_sinh || null, dia_chi || null, ma_tai_khoan || null, id]
     );
     res.json({ message: "Cập nhật khách hàng thành công" });
   } catch {
@@ -43,5 +43,28 @@ export const deleteCustomer = async (req, res) => {
     res.json({ message: "Xóa khách hàng thành công" });
   } catch {
     res.status(500).json({ message: "Lỗi khi xóa khách hàng" });
+  }
+};
+
+export const getCustomerOrders = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const [orders] = await db.query(
+      "SELECT d.* FROM donhang d WHERE d.ma_khach_hang = ? ORDER BY d.thoi_gian_mua DESC",
+      [id]
+    );
+    // For each order, fetch items
+    const results = [];
+    for (const o of orders) {
+      const [items] = await db.query(
+        "SELECT c.*, s.ten_san_pham FROM chitiet_donhang c LEFT JOIN sanpham s ON c.ma_san_pham = s.ma_san_pham WHERE c.ma_don_hang = ?",
+        [o.ma_don_hang]
+      );
+      results.push({ ...o, items });
+    }
+    res.json(results);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Lỗi khi lấy lịch sử mua hàng của khách" });
   }
 };

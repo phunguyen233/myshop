@@ -4,14 +4,16 @@ import { customerAPI, Customer } from "../api/customerAPI";
 const Customers: React.FC = () => {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [formData, setFormData] = useState<Customer>({
     ma_khach_hang: 0,
-    ten_khach_hang: "",
-    sdt: "",
+    ho_ten: "",
+    nam_sinh: undefined,
     dia_chi: "",
-  });
+    ma_tai_khoan: undefined,
+  } as Customer);
 
   // Lấy danh sách khách hàng
   const fetchCustomers = async () => {
@@ -34,7 +36,7 @@ const Customers: React.FC = () => {
   // Mở form thêm khách hàng
   const handleAddClick = () => {
     setEditingId(null);
-  setFormData({ ma_khach_hang: 0, ten_khach_hang: "", sdt: "", dia_chi: "" });
+  setFormData({ ma_khach_hang: 0, ho_ten: "", nam_sinh: undefined, dia_chi: "", ma_tai_khoan: undefined } as Customer);
     setShowForm(true);
   };
 
@@ -58,6 +60,8 @@ const Customers: React.FC = () => {
       }
     }
   };
+
+  // (Lịch sử mua hàng được chuyển sang trang Thống kê)
 
   // Xử lý submit form
   const handleSubmit = async (e: React.FormEvent) => {
@@ -83,26 +87,43 @@ const Customers: React.FC = () => {
   // Xử lý thay đổi input
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    if (name === "sdt") {
-      setFormData({ ...formData, sdt: value });
-    } else if (name === "ten_khach_hang") {
-      setFormData({ ...formData, ten_khach_hang: value });
+    if (name === "ho_ten") {
+      setFormData({ ...formData, ho_ten: value });
+    } else if (name === "nam_sinh") {
+      setFormData({ ...formData, nam_sinh: value ? Number(value) : undefined });
     } else if (name === "dia_chi") {
       setFormData({ ...formData, dia_chi: value });
     }
   };
 
+  // Lọc khách hàng theo tìm kiếm (tên hoặc mã)
+  const filteredCustomers = customers.filter((c) =>
+    c.ho_ten.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    c.ma_khach_hang.toString().includes(searchTerm)
+  );
+
   return (
     <div className="p-6">
       {/* Header với nút thêm khách hàng */}
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex justify-between items-center mb-2">
         <h1 className="text-3xl font-bold">👥 Quản lý khách hàng</h1>
         <button
           onClick={handleAddClick}
-          className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-lg font-semibold transition"
+          className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold transition"
         >
           ➕ Thêm khách hàng
         </button>
+      </div>
+
+      {/* Thanh tìm kiếm (dưới tiêu đề giống trang Sản phẩm) */}
+      <div className="mb-6">
+        <input
+          type="text"
+          placeholder="🔍 Tìm tên hoặc mã khách hàng..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="w-full sm:w-64 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
       </div>
 
       {/* Form thêm/sửa khách hàng */}
@@ -117,22 +138,21 @@ const Customers: React.FC = () => {
                 <label className="block text-sm font-semibold mb-1">Tên khách hàng</label>
                 <input
                   type="text"
-                  name="ten_khach_hang"
-                  value={formData.ten_khach_hang}
+                  name="ho_ten"
+                  value={formData.ho_ten}
                   onChange={handleInputChange}
                   className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   required
                 />
               </div>
               <div>
-                <label className="block text-sm font-semibold mb-1">Số điện thoại</label>
+                <label className="block text-sm font-semibold mb-1">Năm sinh</label>
                 <input
-                  type="tel"
-                  name="sdt"
-                  value={formData.sdt}
+                  type="number"
+                  name="nam_sinh"
+                  value={formData.nam_sinh ?? ""}
                   onChange={handleInputChange}
                   className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  required
                 />
               </div>
               <div>
@@ -140,7 +160,7 @@ const Customers: React.FC = () => {
                 <input
                   type="text"
                   name="dia_chi"
-                  value={formData.dia_chi}
+                  value={formData.dia_chi ?? ""}
                   onChange={handleInputChange}
                   className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   required
@@ -169,8 +189,10 @@ const Customers: React.FC = () => {
       {/* Danh sách khách hàng */}
       {loading ? (
         <p className="text-center text-gray-500 py-8">Đang tải dữ liệu...</p>
-      ) : customers.length === 0 ? (
-        <p className="text-center text-gray-500 py-8">Chưa có khách hàng nào. Hãy thêm khách hàng mới!</p>
+      ) : filteredCustomers.length === 0 ? (
+        <p className="text-center text-gray-500 py-8">
+          {customers.length === 0 ? "Chưa có khách hàng nào. Hãy thêm khách hàng mới!" : "Không tìm thấy khách hàng nào."}
+        </p>
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full border-collapse border">
@@ -178,17 +200,17 @@ const Customers: React.FC = () => {
               <tr className="bg-gray-200">
                 <th className="border p-3 text-left">Mã KH</th>
                 <th className="border p-3 text-left">Tên khách hàng</th>
-                <th className="border p-3 text-center">Số điện thoại</th>
+                <th className="border p-3 text-center">Năm sinh</th>
                 <th className="border p-3 text-left">Địa chỉ</th>
                 <th className="border p-3 text-center">Hành động</th>
               </tr>
             </thead>
             <tbody>
-              {customers.map((c) => (
+              {filteredCustomers.map((c) => (
                 <tr key={c.ma_khach_hang} className="hover:bg-gray-50">
                   <td className="border p-3 text-center">{c.ma_khach_hang}</td>
-                  <td className="border p-3 font-semibold">{c.ten_khach_hang}</td>
-                  <td className="border p-3 text-center">{c.sdt}</td>
+                  <td className="border p-3 font-semibold">{c.ho_ten}</td>
+                  <td className="border p-3 text-center">{c.nam_sinh || "-"}</td>
                   <td className="border p-3">{c.dia_chi}</td>
                   <td className="border p-3 text-center space-x-2">
                     <button
@@ -197,6 +219,7 @@ const Customers: React.FC = () => {
                     >
                       ✏️ Sửa
                     </button>
+                    
                     <button
                       onClick={() => handleDeleteClick(c.ma_khach_hang)}
                       className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded inline-block transition"
@@ -210,6 +233,7 @@ const Customers: React.FC = () => {
           </table>
         </div>
       )}
+      {/* Lịch sử mua hàng đã được chuyển sang trang Thống kê */}
     </div>
   );
 };

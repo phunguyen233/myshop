@@ -5,6 +5,7 @@ import { Product } from "../types/Product";
 export default function Products() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [formData, setFormData] = useState<Product>({
@@ -91,6 +92,12 @@ export default function Products() {
     });
   };
 
+  // Lọc sản phẩm dựa trên tìm kiếm
+  const filteredProducts = products.filter((p) =>
+    p.ten_san_pham.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    p.ma_san_pham.toString().includes(searchTerm)
+  );
+
   return (
     <div className="p-6">
       {/* Header với nút thêm sản phẩm */}
@@ -102,6 +109,17 @@ export default function Products() {
         >
            Thêm sản phẩm
         </button>
+      </div>
+
+      {/* Thanh tìm kiếm */}
+      <div className="mb-6">
+        <input
+          type="text"
+          placeholder="🔍 Tìm kiếm theo tên hoặc mã sản phẩm..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="w-full sm:w-64 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
+        />
       </div>
 
       {/* Form thêm/sửa sản phẩm */}
@@ -178,8 +196,10 @@ export default function Products() {
       {/* Danh sách sản phẩm */}
       {loading ? (
         <p className="text-center text-gray-500 py-8">Đang tải dữ liệu...</p>
-      ) : products.length === 0 ? (
-        <p className="text-center text-gray-500 py-8">Chưa có sản phẩm nào. Hãy thêm sản phẩm mới!</p>
+      ) : filteredProducts.length === 0 ? (
+        <p className="text-center text-gray-500 py-8">
+          {products.length === 0 ? "Chưa có sản phẩm nào. Hãy thêm sản phẩm mới!" : "Không tìm thấy sản phẩm nào."}
+        </p>
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full border-collapse border">
@@ -194,7 +214,7 @@ export default function Products() {
               </tr>
             </thead>
             <tbody>
-              {products.map((p) => (
+              {filteredProducts.map((p) => (
                 <tr key={p.ma_san_pham} className="hover:bg-gray-50">
                   <td className="border p-3">{p.ma_san_pham}</td>
                   <td className="border p-3 font-semibold">{p.ten_san_pham}</td>

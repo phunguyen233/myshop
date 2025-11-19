@@ -20,4 +20,8 @@ export const customerAPI = {
     const res = await axiosClient.delete(`/customers/${id}`);
     return res.data;
   },
+  getOrders: async (id: number) => {
+    const res = await axiosClient.get(`/customers/${id}/orders`);
+    return res.data;
+  }
 };

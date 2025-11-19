@@ -1,30 +1,15 @@
 import axiosClient from "./axiosClient";
 
-export interface LoginData {
-  email: string;
-  password: string;
-}
+const endpoint = "/auth";
 
-export interface LoginResponse {
-  token: string;
-  user: {
-    id: string;
-    name: string;
-    email: string;
-  };
-}
-
-const authAPI = {
-  // Đăng nhập admin
-  login: (data: LoginData): Promise<LoginResponse> => {
-    const url = "/auth/login";
-    return axiosClient.post(url, data);
+export const authAPI = {
+  register: async (payload: { ten_dang_nhap: string; mat_khau: string; ho_ten?: string; email?: string; so_dien_thoai?: string }) => {
+    const res = await axiosClient.post(`${endpoint}/register`, payload);
+    return res.data;
   },
-
-  // Lấy thông tin người dùng hiện tại
-  getCurrentUser: (): Promise<LoginResponse["user"]> => {
-    const url = "/auth/me";
-    return axiosClient.get(url);
+  login: async (payload: { ten_dang_nhap: string; mat_khau: string }) => {
+    const res = await axiosClient.post(`${endpoint}/login`, payload);
+    return res.data;
   },
 };
 

@@ -6,7 +6,7 @@ export default function Sidebar() {
   const isActive = (path: string) => location.pathname === path;
 
   const linkClass = (path: string) =>
-    `flex items-center px-4 py-3 rounded transition ${
+    `flex items-center px-4 py-2 rounded transition ${
       isActive(path)
         ? "bg-green-700 font-semibold"
         : "hover:bg-green-700"
@@ -14,32 +14,56 @@ export default function Sidebar() {
 
   return (
     <aside className="w-64 bg-green-800 text-white min-h-screen p-4 flex flex-col">
-      <h2 className="text-2xl font-bold mb-8 text-center"> Admin</h2>
+      <h2 className="text-2xl font-bold mb-6 text-center"> Admin</h2>
       
-      <nav className="flex flex-col space-y-2 flex-1">
+      <nav className="flex flex-col gap-1 flex-1">
         {/* Trang chủ */}
         <Link to="/dashboard" className={linkClass("/dashboard")}>
-          
-          Trang chủ
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-5 w-5 mr-3">
+            <path d="M3 9.5V20a1 1 0 001 1h5v-7h4v7h5a1 1 0 001-1V9.5a1 1 0 00-.37-.77l-8-6.5a1 1 0 00-1.26 0l-8 6.5A1 1 0 003 9.5z" />
+          </svg>
+          <span>Trang chủ</span>
         </Link>
 
         {/* Quản lý sản phẩm */}
-        <div className="pt-4">
-          <p className="text-xs font-bold text-green-300 uppercase px-4 mb-2">Sản phẩm</p>
-          <Link to="/products" className={linkClass("/products")}>
-            
-            Quản lý sản phẩm
-          </Link>
-        </div>
+        <Link to="/products" className={linkClass("/products")}>
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-5 w-5 mr-3">
+            <path d="M21 16V8a2 2 0 00-1-1.73l-8-5a2 2 0 00-2 0l-8 5A2 2 0 002 8v8a2 2 0 001 1.73l8 5a2 2 0 002 0l8-5A2 2 0 0021 16zM12 3.1L18.6 7 12 10.9 5.4 7 12 3.1zM4 9.2l7 4v7.6L4 16.8V9.2zM13 21.8v-7.6l7-4v7.6l-7 4z" />
+          </svg>
+          <span>Sản phẩm</span>
+        </Link>
 
         {/* Quản lý khách hàng */}
-        <div className="pt-4">
-          <p className="text-xs font-bold text-green-300 uppercase px-4 mb-2">Khách hàng</p>
-          <Link to="/customers" className={linkClass("/customers")}>
-            
-            Danh sách khách hàng
-          </Link>
-        </div>
+        <Link to="/customers" className={linkClass("/customers")}>
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-5 w-5 mr-3">
+            <path d="M12 12a5 5 0 100-10 5 5 0 000 10zm0 2c-5 0-9 2.5-9 6v2h18v-2c0-3.5-4-6-9-6z" />
+          </svg>
+          <span>Khách hàng</span>
+        </Link>
+
+        {/* Quản lý đơn hàng */}
+        <Link to="/orders" className={linkClass("/orders")}>
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-5 w-5 mr-3">
+            <path d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2 5h13m-9 0a1 1 0 11-2 0 1 1 0 012 0zm8 0a1 1 0 11-2 0 1 1 0 012 0z" />
+          </svg>
+          <span>Đơn hàng</span>
+        </Link>
+
+        {/* Nhập kho */}
+        <Link to="/warehouse" className={linkClass("/warehouse")}>
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-5 w-5 mr-3">
+            <path d="M3 3h18v2H3V3zm2 6h14v10H5V9zm2 2v6h4v-6H7zm6-2l4 4 4-8-8 4z" />
+          </svg>
+          <span>Nhập kho</span>
+        </Link>
+
+        {/* Thống kê */}
+        <Link to="/statistics" className={linkClass("/statistics")}>
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-5 w-5 mr-3">
+            <path d="M3 3h18v2H3V3zm3 6h2v10H6V9zm4 4h2v6h-2v-6zm4-8h2v14h-2V5zm4 8h2v6h-2v-6z" />
+          </svg>
+          <span>Thống kê</span>
+        </Link>
       </nav>
 
       {/* Footer */}
