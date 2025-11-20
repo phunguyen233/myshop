@@ -8,8 +8,7 @@ import Customers from "./pages/Customers";
 import Orders from "./pages/Orders";
 import Warehouse from "./pages/Warehouse";
 import Inventory from "./pages/Inventory";
-import Login from "./pages/Login";
-import Register from "./pages/Register";
+import Auth from "./pages/Auth";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 
 function InnerApp() {
@@ -37,10 +36,10 @@ function InnerApp() {
       ) : (
         <div>
           <Routes>
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
+            <Route path="/login" element={<Auth />} />
+            <Route path="/register" element={<Auth />} />
             {/* If not authenticated, redirect everything else to login */}
-            <Route path="*" element={<Login />} />
+            <Route path="*" element={<Auth />} />
           </Routes>
         </div>
       )}
