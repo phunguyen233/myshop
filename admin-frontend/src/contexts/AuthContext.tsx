@@ -3,6 +3,8 @@ import React, { createContext, useContext, useEffect, useState } from "react";
 type AuthContextType = {
   token: string | null;
   setToken: (t: string | null) => void;
+  sidebarCollapsed: boolean;
+  setSidebarCollapsed: (c: boolean) => void;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -16,6 +18,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   });
 
+  const [sidebarCollapsed, setSidebarCollapsedState] = useState<boolean>(false);
+
   const setToken = (t: string | null) => {
     try {
       if (t) localStorage.setItem("token", t);
@@ -27,16 +31,37 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setTokenState(t);
   };
 
+  const setSidebarCollapsed = (c: boolean) => {
+    try {
+      // persist sidebar state in localStorage so it survives refreshes
+      localStorage.setItem("sidebar_collapsed", c ? "1" : "0");
+    } catch {}
+    setSidebarCollapsedState(c);
+  };
+
   // Keep token state in sync if another tab changes localStorage
   useEffect(() => {
     const handler = (e: StorageEvent) => {
       if (e.key === "token") setTokenState(e.newValue);
+      if (e.key === "sidebar_collapsed") setSidebarCollapsedState(e.newValue === "1");
     };
     window.addEventListener("storage", handler);
     return () => window.removeEventListener("storage", handler);
   }, []);
 
-  return <AuthContext.Provider value={{ token, setToken }}>{children}</AuthContext.Provider>;
+  // read persisted sidebar state on mount
+  useEffect(() => {
+    try {
+      const v = localStorage.getItem("sidebar_collapsed");
+      if (v !== null) setSidebarCollapsedState(v === "1");
+    } catch {}
+  }, []);
+
+  return (
+    <AuthContext.Provider value={{ token, setToken, sidebarCollapsed, setSidebarCollapsed }}>
+      {children}
+    </AuthContext.Provider>
+  );
 };
 
 export const useAuth = () => {
