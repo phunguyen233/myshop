@@ -1,4 +1,4 @@
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 
 export default function Sidebar() {
@@ -15,12 +15,12 @@ export default function Sidebar() {
     }`;
 
   return (
-    <aside className={`${sidebarCollapsed ? "w-12" : "w-64"} bg-gray-100 text-gray-800 min-h-screen p-2 flex flex-col transition-all duration-300 ease-in-out`}> 
+    <aside className={`${sidebarCollapsed ? "w-12" : "w-64"} bg-gray-100 text-gray-800 sticky top-0 h-screen p-2 flex flex-col transition-all duration-300 ease-in-out overflow-auto z-20`}> 
       {!sidebarCollapsed && (
         <h2 className="text-2xl font-bold mb-6 text-center">Admin</h2>
       )}
 
-      <nav className={sidebarCollapsed ? "flex flex-col gap-2 items-center pt-3" : "flex flex-col gap-1 flex-1"}>
+      <nav className={sidebarCollapsed ? "flex flex-col gap-2 items-center pt-3" : "flex flex-col gap-1"}>
         {/* Trang chủ */}
         <Link to="/dashboard" className={linkClass("/dashboard")}>
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className={`h-5 w-5 text-gray-700 ${sidebarCollapsed ? "" : "mr-3"}`}>
@@ -70,11 +70,62 @@ export default function Sidebar() {
         </Link>
       </nav>
 
-      {!sidebarCollapsed && (
-        <div className="border-t border-gray-200 pt-4 text-sm text-gray-500 text-center">
-          <p>Admin Panel v1.0</p>
-        </div>
-      )}
+      {/* Bottom area: user name and logout */}
+      <div className="mt-auto">
+        {!sidebarCollapsed ? (
+          <div className="border-t border-gray-200 pt-4 px-3">
+            <UserLogout />
+          </div>
+        ) : (
+          <div className="pt-4 flex justify-center">
+            <SmallLogoutIcon />
+          </div>
+        )}
+      </div>
     </aside>
+  );
+}
+
+function UserLogout() {
+  const navigate = useNavigate();
+  const { setToken } = useAuth();
+  const userRaw = localStorage.getItem("user");
+  const user = userRaw ? JSON.parse(userRaw) : null;
+
+  const handleLogout = () => {
+    try {
+      setToken(null);
+      localStorage.removeItem("user");
+    } catch {}
+    navigate("/login");
+  };
+
+  return (
+    <div className="text-left">
+      <p className="text-sm font-medium mb-2">{user?.ho_ten || user?.ten_dang_nhap || "Người dùng"}</p>
+      <button
+        onClick={handleLogout}
+        className="w-full bg-white text-gray-800 border border-gray-300 py-2 rounded-md font-semibold transition hover:bg-red-500 hover:text-white"
+      >
+        Đăng xuất
+      </button>
+    </div>
+  );
+}
+
+function SmallLogoutIcon() {
+  const navigate = useNavigate();
+  const { setToken } = useAuth();
+  const handleLogout = () => {
+    try { setToken(null); localStorage.removeItem("user"); } catch {}
+    navigate('/login');
+  };
+  return (
+    <button onClick={handleLogout} className="p-2 rounded-md bg-white text-gray-700 border border-gray-300 hover:bg-red-500 hover:text-white">
+      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+        <path fillRule="evenodd" d="M3 4a1 1 0 011-1h6a1 1 0 110 2H5v10h5a1 1 0 110 2H4a1 1 0 01-1-1V4z" clipRule="evenodd" />
+        <path d="M14 7l3 3m0 0l-3 3m3-3H9" />
+      </svg>
+    </button>
   );
 }

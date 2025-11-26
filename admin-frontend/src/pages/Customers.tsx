@@ -111,7 +111,7 @@ const Customers: React.FC = () => {
           onClick={handleAddClick}
           className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold transition"
         >
-          ➕ Thêm khách hàng
+           Thêm khách hàng
         </button>
       </div>
 
@@ -131,7 +131,7 @@ const Customers: React.FC = () => {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-8 max-w-md w-full shadow-xl">
             <h3 className="text-2xl font-bold mb-6">
-              {editingId ? "✏️ Sửa khách hàng" : "➕ Thêm khách hàng mới"}
+              {editingId ? "✏️ Sửa khách hàng" : "Thêm khách hàng mới"}
             </h3>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
@@ -217,14 +217,14 @@ const Customers: React.FC = () => {
                       onClick={() => handleEditClick(c)}
                       className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded inline-block transition"
                     >
-                      ✏️ Sửa
+                       Sửa
                     </button>
                     
                     <button
                       onClick={() => handleDeleteClick(c.ma_khach_hang)}
                       className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded inline-block transition"
                     >
-                      🗑️ Xóa
+                       Xóa
                     </button>
                   </td>
                 </tr>

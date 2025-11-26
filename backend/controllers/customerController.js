@@ -12,11 +12,12 @@ export const getCustomers = async (req, res) => {
 export const addCustomer = async (req, res) => {
   try {
     const { ho_ten, nam_sinh, dia_chi, ma_tai_khoan } = req.body;
-    await db.query(
+    const [result] = await db.query(
       "INSERT INTO khachhang (ho_ten, nam_sinh, dia_chi, ma_tai_khoan) VALUES (?, ?, ?, ?)",
       [ho_ten, nam_sinh || null, dia_chi || null, ma_tai_khoan || null]
     );
-    res.status(201).json({ message: "Thêm khách hàng thành công" });
+    const insertId = result.insertId;
+    res.status(201).json({ message: "Thêm khách hàng thành công", ma_khach_hang: insertId });
   } catch {
     res.status(500).json({ message: "Lỗi khi thêm khách hàng" });
   }

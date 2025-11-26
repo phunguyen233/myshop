@@ -49,14 +49,15 @@ export const login = async (req, res) => {
     // Pick a sensible id field if present.
     const userId = user.ma_tai_khoan || user.id || user.ID || user.ma_tk || null;
 
-    const token = jwt.sign({ id: userId, ten_dang_nhap: user.ten_dang_nhap, ho_ten: user.ho_ten }, JWT_SECRET, {
+    const role = user.vai_tro || user.role || (user.ten_dang_nhap === 'admin' ? 'admin' : null);
+    const token = jwt.sign({ id: userId, ten_dang_nhap: user.ten_dang_nhap, ho_ten: user.ho_ten, role }, JWT_SECRET, {
       expiresIn: "7d",
     });
 
     res.json({
       message: "Đăng nhập thành công",
       token,
-      user: { id: userId, ten_dang_nhap: user.ten_dang_nhap, ho_ten: user.ho_ten, email: user.email },
+      user: { id: userId, ten_dang_nhap: user.ten_dang_nhap, ho_ten: user.ho_ten, email: user.email, role },
     });
   } catch (err) {
     console.error("Error in login:", err);

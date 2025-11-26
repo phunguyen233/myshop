@@ -28,12 +28,7 @@ export default function Header() {
       </div>
       <div className="flex items-center space-x-6">
         {user ? (
-          <>
-            <span className="text-lg font-semibold">👤 {user.ho_ten || user.ten_dang_nhap}</span>
-            <button onClick={handleLogout} className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg font-semibold transition">
-              Đăng xuất
-            </button>
-          </>
+          <span className="text-lg font-semibold">👤 {user.ho_ten || user.ten_dang_nhap}</span>
         ) : (
           <button onClick={() => navigate('/login')} className="bg-white text-gray-800 px-4 py-2 rounded-lg font-semibold border border-gray-200">
             Đăng nhập
