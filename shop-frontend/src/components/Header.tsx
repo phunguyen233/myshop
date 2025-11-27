@@ -49,7 +49,7 @@ export default function Header() {
       <nav className="header-center">
         <Link to="/" className="nav-link">Trang chủ</Link>
         <Link to="/products" className="nav-link">Sản phẩm</Link>
-        <Link to="/details" className="nav-link">Chi tiết</Link>
+        <Link to="/about" className="nav-link">Giới thiệu</Link>
         <Link to="/contact" className="nav-link">Liên hệ</Link>
         <Link to="/branches" className="nav-link">Chi nhánh</Link>
       </nav>

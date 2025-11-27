@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { Product } from "../types/Product";
-import { useNavigate } from "react-router-dom";
 
 const API_URL = "http://localhost:5000/api/products";
 
@@ -10,7 +9,6 @@ export default function ShopProducts() {
   const [query, setQuery] = useState<string>("");
   const [hoveredId, setHoveredId] = useState<number | null>(null);
   const [pressedButton, setPressedButton] = useState<string | null>(null);
-  const navigate = useNavigate();
 
   useEffect(() => {
     axios
@@ -51,9 +49,6 @@ export default function ShopProducts() {
     }
   };
 
-  const handleDetails = (product: Product) => {
-    navigate(`/product/${product.id}`);
-  };
   const filteredProducts = products.filter((p) =>
     p.ten_san_pham?.toLowerCase().includes(query.trim().toLowerCase())
   );
@@ -118,8 +113,8 @@ export default function ShopProducts() {
                 <p className="text-green-600 font-bold mb-3">{Number(p.gia_ban).toLocaleString()}đ</p>
               </div>
 
-              {/* Buttons row: Add to cart (green) + Details (white) */}
-              <div className="px-2 mt-3 flex gap-4 items-center">
+              {/* Button: Add to cart only */}
+              <div >
                 <button
                   type="button"
                   onClick={() => handleAddToCart(p)}
@@ -129,30 +124,13 @@ export default function ShopProducts() {
                   onTouchStart={() => setPressedButton(`${p.id}-add`)}
                   onTouchEnd={() => setPressedButton(null)}
                   className={
-                    `flex-1 text-white py-3 text-base rounded-2xl transition transform duration-100 focus:outline-none focus:ring-2 focus:ring-green-300 shadow-sm ` +
+                    `w-full text-white py-1.5 text-base rounded-2xl transition transform duration-100 focus:outline-none focus:ring-2 focus:ring-green-300 shadow-sm ` +
                     (pressedButton === `${p.id}-add`
                       ? "bg-green-900 scale-95"
                       : "bg-green-600 hover:bg-green-700 active:bg-green-800")
                   }
                 >
                   Thêm giỏ hàng
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleDetails(p)}
-                  onMouseDown={() => setPressedButton(`${p.id}-details`)}
-                  onMouseUp={() => setPressedButton(null)}
-                  onMouseLeave={() => setPressedButton(null)}
-                  onTouchStart={() => setPressedButton(`${p.id}-details`)}
-                  onTouchEnd={() => setPressedButton(null)}
-                  className={
-                    `flex-1 text-gray-800 border border-gray-300 py-3 text-base rounded-2xl transition transform duration-100 focus:outline-none focus:ring-2 focus:ring-gray-200 shadow-sm ` +
-                    (pressedButton === `${p.id}-details`
-                      ? "bg-gray-300 scale-95"
-                      : "bg-white hover:bg-gray-100 active:bg-gray-200")
-                  }
-                >
-                  Chi tiết
                 </button>
               </div>
             </div>

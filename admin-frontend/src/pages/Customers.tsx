@@ -109,7 +109,7 @@ const Customers: React.FC = () => {
         <h1 className="text-3xl font-bold">👥 Quản lý khách hàng</h1>
         <button
           onClick={handleAddClick}
-          className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold transition"
+          className="bg-white-500 border hover:bg-green-500 hover:text-white px-4 py-2 rounded-lg font-semibold transition"
         >
            Thêm khách hàng
         </button>
@@ -215,14 +215,14 @@ const Customers: React.FC = () => {
                   <td className="border p-3 text-center space-x-2">
                     <button
                       onClick={() => handleEditClick(c)}
-                      className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded inline-block transition"
+                      className="bg-white-500 border hover:bg-green-500 hover:text-white px-3 py-1 rounded inline-block transition"
                     >
                        Sửa
                     </button>
                     
                     <button
                       onClick={() => handleDeleteClick(c.ma_khach_hang)}
-                      className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded inline-block transition"
+                      className="bg-white-500 border hover:bg-red-500 hover:text-white px-3 py-1 rounded inline-block transition"
                     >
                        Xóa
                     </button>

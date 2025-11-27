@@ -105,7 +105,7 @@ export default function Products() {
         <h2 className="text-3xl font-bold">📦 Quản lý sản phẩm</h2>
         <button
           onClick={handleAddClick}
-          className="bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded-lg font-semibold transition"
+          className="bg-while-500 border hover:bg-green-500 hover:text-white px-6 py-2 rounded-lg font-semibold transition"
         >
            Thêm sản phẩm
         </button>
@@ -234,13 +234,13 @@ export default function Products() {
                   <td className="border p-3 text-center space-x-2">
                     <button
                       onClick={() => handleEditClick(p)}
-                      className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded inline-block transition"
+                      className="bg-while-500 border hover:bg-green-500 hover:text-white px-3 py-1 rounded inline-block transition"
                     >
                        Sửa
                     </button>
                     <button
                       onClick={() => handleDeleteClick(p.ma_san_pham)}
-                      className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded inline-block transition"
+                      className="bg-while-500 border hover:bg-red-600 hover:text-white px-3 py-1 rounded inline-block transition"
                     >
                        Xóa
                     </button>

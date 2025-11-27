@@ -4,7 +4,7 @@ import './App.css';
 import Header from './components/Header';
 import Home from './pages/Home';
 import ShopProducts from './pages/ShopProducts';
-import Details from './pages/Details';
+import About from './pages/About';
 import Contact from './pages/Contact';
 import Branches from './pages/Branches';
 import Cart from './pages/Cart';
@@ -19,7 +19,7 @@ function App() {
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/products" element={<ShopProducts />} />
-            <Route path="/details" element={<Details />} />
+            <Route path="/about" element={<About />} />
             <Route path="/contact" element={<Contact />} />
             <Route path="/branches" element={<Branches />} />
             <Route path="/cart" element={<Cart />} />
