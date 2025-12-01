@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { Product } from "../types/Product";
-import { useNavigate } from "react-router-dom";
 
 const API_URL = "http://localhost:5000/api/products";
 
@@ -10,7 +9,6 @@ export default function ShopProducts() {
   const [query, setQuery] = useState<string>("");
   const [hoveredId, setHoveredId] = useState<number | null>(null);
   const [pressedButton, setPressedButton] = useState<string | null>(null);
-  const navigate = useNavigate();
 
   useEffect(() => {
     axios
