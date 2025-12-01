@@ -2,10 +2,26 @@ import db from "../config/db.js";
 
 export const getProducts = async (req, res) => {
   try {
-    const [rows] = await db.query("SELECT * FROM sanpham WHERE trang_thai='hien'");
+    // Return all products; frontend will decide how to present hidden items
+    const [rows] = await db.query(
+      "SELECT ma_san_pham, ten_san_pham, gia_ban, so_luong_ton, hinh_anh, trang_thai, DATE_FORMAT(CONVERT_TZ(ngay_tao, @@session.time_zone, '+07:00'), '%Y-%m-%d %H:%i:%s') as ngay_tao, DATE_FORMAT(CONVERT_TZ(ngay_cap_nhat, @@session.time_zone, '+07:00'), '%Y-%m-%d %H:%i:%s') as ngay_cap_nhat FROM sanpham"
+    );
     res.json(rows);
-  } catch {
+  } catch (err) {
+    console.error(err);
     res.status(500).json({ message: "Lỗi khi lấy danh sách sản phẩm" });
+  }
+};
+
+export const getProductsAdmin = async (req, res) => {
+  try {
+    const [rows] = await db.query(
+      "SELECT ma_san_pham, ten_san_pham, gia_ban, so_luong_ton, hinh_anh, trang_thai, DATE_FORMAT(CONVERT_TZ(ngay_tao, @@session.time_zone, '+07:00'), '%Y-%m-%d %H:%i:%s') as ngay_tao, DATE_FORMAT(CONVERT_TZ(ngay_cap_nhat, @@session.time_zone, '+07:00'), '%Y-%m-%d %H:%i:%s') as ngay_cap_nhat FROM sanpham"
+    );
+    res.json(rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Lỗi khi lấy danh sách sản phẩm (admin)" });
   }
 };
 

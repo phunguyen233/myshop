@@ -3,7 +3,9 @@ import db from "../config/db.js";
 // Lấy danh sách nhập kho
 export const getWarehouse = async (req, res) => {
   try {
-    const [rows] = await db.query("SELECT * FROM nhapkho ORDER BY thoi_gian_nhap DESC");
+    const [rows] = await db.query(
+      "SELECT ma_nhap, don_vi_nhap, tong_gia_tri, DATE_FORMAT(CONVERT_TZ(thoi_gian_nhap, @@session.time_zone, '+07:00'), '%Y-%m-%d %H:%i:%s') as thoi_gian_nhap FROM nhapkho ORDER BY thoi_gian_nhap DESC"
+    );
     res.json(rows);
   } catch {
     res.status(500).json({ message: "Lỗi khi lấy danh sách nhập kho" });

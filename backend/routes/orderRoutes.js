@@ -1,8 +1,10 @@
 import express from "express";
-import { getOrders, addOrder, getOrderById, searchOrders } from "../controllers/orderController.js";
+import { getOrders, addOrder, getOrderById, searchOrders, updateOrderStatus } from "../controllers/orderController.js";
+import requireAdmin from "../middleware/requireAdmin.js";
 const router = express.Router();
 router.get("/search", searchOrders);
 router.get("/", getOrders);
 router.get("/:id", getOrderById);
+router.put("/:id/status", requireAdmin, updateOrderStatus);
 router.post("/", addOrder);
 export default router;

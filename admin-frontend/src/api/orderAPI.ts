@@ -20,6 +20,9 @@ export interface Order {
   ten_khach_hang?: string;
   dia_chi?: string;
   nam_sinh?: string;
+  ten_nguoi_nhan?: string;
+  so_dien_thoai_nhan?: string;
+  dia_chi_nhan?: string;
 }
 
 const endpoint = "/orders";
@@ -33,12 +36,18 @@ export const orderAPI = {
     const res = await axiosClient.get(`${endpoint}/${id}`);
     return res.data;
   },
-  create: async (payload: { ma_khach_hang: number; tong_tien: number; chi_tiet: OrderItem[] }) => {
+  create: async (payload: { ma_khach_hang?: number; ten_nguoi_nhan?: string; so_dien_thoai_nhan?: string; dia_chi_nhan?: string; tong_tien: number; chi_tiet: OrderItem[] }) => {
     const res = await axiosClient.post(endpoint, payload);
     return res.data;
   },
   search: async (q: string) => {
     const res = await axiosClient.get(`${endpoint}/search`, { params: { q } });
+    return res.data;
+  },
+  updateStatus: async (id: number, trang_thai: string) => {
+    const url = `${endpoint}/${id}/status`;
+    console.debug('orderAPI.updateStatus ->', url, { trang_thai });
+    const res = await axiosClient.put(url, { trang_thai });
     return res.data;
   },
 };

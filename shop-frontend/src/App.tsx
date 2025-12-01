@@ -4,11 +4,12 @@ import './App.css';
 import Header from './components/Header';
 import Home from './pages/Home';
 import ShopProducts from './pages/ShopProducts';
-import Details from './pages/Details';
+import About from './pages/About';
 import Contact from './pages/Contact';
 import Branches from './pages/Branches';
 import Cart from './pages/Cart';
 import Auth from './pages/Auth';
+import OrderHistory from './pages/OrderHistory';
 
 function App() {
   return (
@@ -19,10 +20,11 @@ function App() {
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/products" element={<ShopProducts />} />
-            <Route path="/details" element={<Details />} />
+            <Route path="/details" element={<About />} />
             <Route path="/contact" element={<Contact />} />
             <Route path="/branches" element={<Branches />} />
             <Route path="/cart" element={<Cart />} />
+            <Route path="/orders-history" element={<OrderHistory />} />
             <Route path="/auth/*" element={<Auth />} />
           </Routes>
         </main>

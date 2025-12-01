@@ -12,7 +12,9 @@ export const getInventoryCurrent = async (req, res) => {
 
 export const getInventoryHistory = async (req, res) => {
   try {
-    const [rows] = await db.query("SELECT l.*, s.ten_san_pham FROM lichsu_tonkho l LEFT JOIN sanpham s ON l.ma_san_pham = s.ma_san_pham ORDER BY l.ngay_thay_doi DESC");
+    const [rows] = await db.query(
+      "SELECT l.id, l.ma_san_pham, l.so_luong_thay_doi, l.ly_do, DATE_FORMAT(CONVERT_TZ(l.ngay_thay_doi, @@session.time_zone, '+07:00'), '%Y-%m-%d %H:%i:%s') as ngay_thay_doi, s.ten_san_pham FROM lichsu_tonkho l LEFT JOIN sanpham s ON l.ma_san_pham = s.ma_san_pham ORDER BY l.ngay_thay_doi DESC"
+    );
     res.json(rows);
   } catch (err) {
     console.error(err);

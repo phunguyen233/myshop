@@ -10,8 +10,7 @@ const Customers: React.FC = () => {
   const [formData, setFormData] = useState<Customer>({
     ma_khach_hang: 0,
     ho_ten: "",
-    nam_sinh: undefined,
-    dia_chi: "",
+    so_dien_thoai: undefined,
     ma_tai_khoan: undefined,
   } as Customer);
 
@@ -36,7 +35,7 @@ const Customers: React.FC = () => {
   // Mở form thêm khách hàng
   const handleAddClick = () => {
     setEditingId(null);
-  setFormData({ ma_khach_hang: 0, ho_ten: "", nam_sinh: undefined, dia_chi: "", ma_tai_khoan: undefined } as Customer);
+  setFormData({ ma_khach_hang: 0, ho_ten: "", so_dien_thoai: undefined, ma_tai_khoan: undefined } as Customer);
     setShowForm(true);
   };
 
@@ -72,7 +71,18 @@ const Customers: React.FC = () => {
         await customerAPI.update(editingId, formData);
         alert("Cập nhật khách hàng thành công!");
       } else {
-        // Thêm khách hàng mới
+        // Thêm khách hàng mới: kiểm tra trùng số điện thoại trước
+        const phone = (formData.so_dien_thoai || "").trim();
+        if (!phone) {
+          alert("Số điện thoại không được để trống.");
+          return;
+        }
+        const existsByPhone = customers.some(c => (c.so_dien_thoai || "").trim() === phone);
+        if (existsByPhone) {
+          alert("Số điện thoại đã tồn tại trong danh sách khách hàng — không thêm được.");
+          return;
+        }
+        // Nếu chưa trùng, tạo mới
         await customerAPI.create(formData);
         alert("Thêm khách hàng thành công!");
       }
@@ -89,41 +99,47 @@ const Customers: React.FC = () => {
     const { name, value } = e.target;
     if (name === "ho_ten") {
       setFormData({ ...formData, ho_ten: value });
-    } else if (name === "nam_sinh") {
-      setFormData({ ...formData, nam_sinh: value ? Number(value) : undefined });
-    } else if (name === "dia_chi") {
-      setFormData({ ...formData, dia_chi: value });
+    } else if (name === "so_dien_thoai") {
+      setFormData({ ...formData, so_dien_thoai: value });
     }
   };
 
-  // Lọc khách hàng theo tìm kiếm (tên hoặc mã)
-  const filteredCustomers = customers.filter((c) =>
-    c.ho_ten.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    c.ma_khach_hang.toString().includes(searchTerm)
-  );
+  // Lọc khách hàng theo tìm kiếm (tên hoặc mã hoặc số điện thoại)
+  const filteredCustomers = customers.filter((c) => {
+    const q = (searchTerm || "").trim().toLowerCase();
+    if (!q) return true;
+    return (
+      (c.ho_ten || "").toLowerCase().includes(q) ||
+      c.ma_khach_hang.toString().includes(q) ||
+      ((c.so_dien_thoai || "").toLowerCase().includes(q))
+    );
+  });
 
   return (
     <div className="p-6">
-      {/* Header với nút thêm khách hàng */}
-      <div className="flex justify-between items-center mb-2">
-        <h1 className="text-3xl font-bold">👥 Quản lý khách hàng</h1>
-        <button
-          onClick={handleAddClick}
-          className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold transition"
-        >
-           Thêm khách hàng
-        </button>
-      </div>
-
-      {/* Thanh tìm kiếm (dưới tiêu đề giống trang Sản phẩm) */}
       <div className="mb-6">
-        <input
-          type="text"
-          placeholder="🔍 Tìm tên hoặc mã khách hàng..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="w-full sm:w-64 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-        />
+        <h1 className="text-3xl font-bold">👥 Quản lý khách hàng</h1>
+        <div className="flex justify-between items-center mt-4">
+          <div className="flex items-center gap-2 w-full max-w-lg">
+            <input
+              type="text"
+              placeholder="🔍 Tìm theo tên, mã hoặc số điện thoại..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              onKeyDown={(e) => { if (e.key === 'Enter') { /* client-side filter is reactive */ } }}
+            />
+            <button onClick={() => { /* no-op: filter is reactive */ }} className="bg-blue-500 text-white px-4 py-2 rounded">Tìm</button>
+          </div>
+          <div>
+            <button
+              onClick={handleAddClick}
+              className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-semibold"
+            >
+              Thêm khách hàng
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* Form thêm/sửa khách hàng */}
@@ -145,27 +161,17 @@ const Customers: React.FC = () => {
                   required
                 />
               </div>
-              <div>
-                <label className="block text-sm font-semibold mb-1">Năm sinh</label>
-                <input
-                  type="number"
-                  name="nam_sinh"
-                  value={formData.nam_sinh ?? ""}
-                  onChange={handleInputChange}
-                  className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold mb-1">Địa chỉ</label>
-                <input
-                  type="text"
-                  name="dia_chi"
-                  value={formData.dia_chi ?? ""}
-                  onChange={handleInputChange}
-                  className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  required
-                />
-              </div>
+                <div>
+                  <label className="block text-sm font-semibold mb-1">Số điện thoại</label>
+                  <input
+                    type="text"
+                    name="so_dien_thoai"
+                    value={formData.so_dien_thoai ?? ""}
+                    onChange={handleInputChange}
+                    className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    required
+                  />
+                </div>
               <div className="flex gap-3 pt-4">
                 <button
                   type="submit"
@@ -200,8 +206,8 @@ const Customers: React.FC = () => {
               <tr className="bg-gray-200">
                 <th className="border p-3 text-left">Mã KH</th>
                 <th className="border p-3 text-left">Tên khách hàng</th>
-                <th className="border p-3 text-center">Năm sinh</th>
-                <th className="border p-3 text-left">Địa chỉ</th>
+                <th className="border p-3 text-left">SĐT</th>
+                <th className="border p-3 text-left">Ngày tạo</th>
                 <th className="border p-3 text-center">Hành động</th>
               </tr>
             </thead>
@@ -210,19 +216,19 @@ const Customers: React.FC = () => {
                 <tr key={c.ma_khach_hang} className="hover:bg-gray-50">
                   <td className="border p-3 text-center">{c.ma_khach_hang}</td>
                   <td className="border p-3 font-semibold">{c.ho_ten}</td>
-                  <td className="border p-3 text-center">{c.nam_sinh || "-"}</td>
-                  <td className="border p-3">{c.dia_chi}</td>
+                  <td className="border p-3">{c.so_dien_thoai || '-'}</td>
+                  <td className="border p-3">{c.ngay_tao || '-'}</td>
                   <td className="border p-3 text-center space-x-2">
                     <button
                       onClick={() => handleEditClick(c)}
-                      className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded inline-block transition"
+                      className="bg-white border hover:bg-green-500 hover:text-white px-3 py-1 rounded inline-block transition"
                     >
                        Sửa
                     </button>
                     
                     <button
                       onClick={() => handleDeleteClick(c.ma_khach_hang)}
-                      className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded inline-block transition"
+                      className="bg-white border hover:bg-red-600 hover:text-white px-3 py-1 rounded inline-block transition"
                     >
                        Xóa
                     </button>

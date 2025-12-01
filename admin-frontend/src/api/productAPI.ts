@@ -3,6 +3,7 @@ import { Product } from "../types/Product";
 
 export const productAPI = {
   getAll: async (): Promise<Product[]> => {
+    // Use the public endpoint so the admin page always loads product list from DB.
     const res = await axiosClient.get("/products");
     return res.data;
   },
@@ -16,6 +17,10 @@ export const productAPI = {
   },
   delete: async (id: number) => {
     const res = await axiosClient.delete(`/products/${id}`);
+    return res.data;
+  },
+  toggle: async (id: number) => {
+    const res = await axiosClient.patch(`/products/${id}/toggle`);
     return res.data;
   },
 };

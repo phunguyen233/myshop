@@ -61,6 +61,17 @@ export default function Products() {
       }
     }
   };
+  
+  const handleToggleVisibility = async (id: number) => {
+    try {
+      await productAPI.toggle(id);
+      // refresh list to show updated trạng_thai
+      fetchProducts();
+    } catch (err) {
+      console.error('Lỗi khi đổi trạng thái sản phẩm', err);
+      alert('Lỗi khi đổi trạng thái sản phẩm');
+    }
+  };
 
   // Xử lý submit form
   const handleSubmit = async (e: React.FormEvent) => {
@@ -100,26 +111,29 @@ export default function Products() {
 
   return (
     <div className="p-6">
-      {/* Header với nút thêm sản phẩm */}
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-3xl font-bold">📦 Quản lý sản phẩm</h2>
-        <button
-          onClick={handleAddClick}
-          className="bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded-lg font-semibold transition"
-        >
-           Thêm sản phẩm
-        </button>
-      </div>
-
-      {/* Thanh tìm kiếm */}
       <div className="mb-6">
-        <input
-          type="text"
-          placeholder="🔍 Tìm kiếm theo tên hoặc mã sản phẩm..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="w-full sm:w-64 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
-        />
+        <h2 className="text-3xl font-bold">📦 Quản lý sản phẩm</h2>
+        <div className="flex justify-between items-center mt-4">
+          <div className="flex items-center gap-2 w-full max-w-lg">
+            <input
+              type="text"
+              placeholder="🔍 Tìm kiếm theo tên, mã sản phẩm..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full sm:w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
+              onKeyDown={(e) => { if (e.key === 'Enter') { /* client-side filter reactive */ } }}
+            />
+            <button onClick={() => {}} className="bg-blue-500 text-white px-4 py-2 rounded">Tìm</button>
+          </div>
+          <div>
+            <button
+              onClick={handleAddClick}
+              className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-semibold"
+            >
+               Thêm sản phẩm
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* Form thêm/sửa sản phẩm */}
@@ -215,9 +229,16 @@ export default function Products() {
             </thead>
             <tbody>
               {filteredProducts.map((p) => (
-                <tr key={p.ma_san_pham} className="hover:bg-gray-50">
+                <tr key={p.ma_san_pham} className={`hover:bg-gray-50 ${p.trang_thai !== 'hien' ? 'opacity-70' : ''}`}>
                   <td className="border p-3">{p.ma_san_pham}</td>
-                  <td className="border p-3 font-semibold">{p.ten_san_pham}</td>
+                  <td className="border p-3 font-semibold">
+                    <div className="flex items-center gap-2">
+                      <span>{p.ten_san_pham}</span>
+                      {p.trang_thai !== 'hien' && (
+                        <span className="text-xs bg-gray-200 text-gray-700 px-2 py-1 rounded">Đã ẩn</span>
+                      )}
+                    </div>
+                  </td>
                   <td className="border p-3 text-center">{p.gia_ban.toLocaleString("vi-VN")}₫</td>
                   <td className="border p-3 text-center">
                     <span className={`px-3 py-1 rounded-full text-sm font-semibold ${
@@ -231,20 +252,38 @@ export default function Products() {
                       <img src={p.hinh_anh} alt={p.ten_san_pham} className="w-12 h-12 object-cover rounded mx-auto" />
                     )}
                   </td>
-                  <td className="border p-3 text-center space-x-2">
-                    <button
-                      onClick={() => handleEditClick(p)}
-                      className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded inline-block transition"
-                    >
-                       Sửa
-                    </button>
-                    <button
-                      onClick={() => handleDeleteClick(p.ma_san_pham)}
-                      className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded inline-block transition"
-                    >
-                       Xóa
-                    </button>
+                  <td className="border p-5">
+                    <div className="flex items-center justify-center gap-3">
+
+                      <button
+                        onClick={() => handleEditClick(p)}
+                        className="bg-white border hover:bg-green-500 hover:text-white px-3 py-1 rounded transition"
+                      >
+                        Sửa
+                      </button>
+
+                      <button
+                        onClick={() => handleDeleteClick(p.ma_san_pham)}
+                        className="bg-white border hover:bg-red-500 hover:text-white px-3 py-1 rounded transition"
+                      >
+                        Xóa
+                      </button>
+
+                      {/* Công tắc gạt */}
+                      <label className="relative inline-flex items-center cursor-pointer">
+                        <input
+                          type="checkbox"
+                          className="sr-only peer"
+                          checked={p.trang_thai === "hien"}
+                          onChange={() => handleToggleVisibility(p.ma_san_pham)}
+                        />
+                        <div className="w-11 h-6 bg-gray-300 rounded-full peer-checked:bg-green-600 transition"></div>
+                        <div className="absolute left-1 top-1 bg-white w-4 h-4 rounded-full shadow transform peer-checked:translate-x-5 transition"></div>
+                      </label>
+
+                    </div>
                   </td>
+
                 </tr>
               ))}
             </tbody>

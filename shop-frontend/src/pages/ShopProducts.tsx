@@ -25,7 +25,8 @@ export default function ShopProducts() {
           hien_thi: (row.trang_thai ?? row.hien_thi) === "hien" || row.hien_thi === true,
         }));
 
-        setProducts(mapped.filter((p) => p.hien_thi));
+        // Include hidden products too; the UI will mark them as out-of-stock
+        setProducts(mapped);
       })
       .catch((err) => {
         console.error("Lỗi khi lấy sản phẩm:", err);
@@ -34,26 +35,37 @@ export default function ShopProducts() {
 
   const handleAddToCart = (product: Product) => {
     try {
+      // prevent adding if out of stock
+      // Prevent adding if product is hidden or out of stock
+      if (!product.hien_thi) {
+        alert('Sản phẩm hiện không có sẵn để đặt (đang ẩn).');
+        return;
+      }
+      if ((product.so_luong_ton || 0) <= 0) {
+        alert('Sản phẩm hiện đang hết hàng');
+        return;
+      }
       const raw = localStorage.getItem("cart");
       const cart: Array<any> = raw ? JSON.parse(raw) : [];
       const existing = cart.find((c) => c.id === product.id);
       if (existing) {
-        existing.quantity = (existing.quantity || 1) + 1;
+        const nextQty = (existing.quantity || 1) + 1;
+        if (nextQty > (product.so_luong_ton || 0)) {
+          alert('Không thể thêm nữa, số lượng vượt quá tồn kho');
+          return;
+        }
+        existing.quantity = nextQty;
       } else {
         cart.push({ ...product, quantity: 1 });
       }
       localStorage.setItem("cart", JSON.stringify(cart));
-      // small feedback (can be replaced with a toast)
-      // eslint-disable-next-line no-alert
       alert(`${product.ten_san_pham} đã được thêm vào giỏ hàng`);
     } catch (err) {
       console.error("Lỗi khi thêm vào giỏ hàng:", err);
     }
   };
 
-  const handleDetails = (product: Product) => {
-    navigate(`/product/${product.id}`);
-  };
+  // details view removed — single-button product cards
   const filteredProducts = products.filter((p) =>
     p.ten_san_pham?.toLowerCase().includes(query.trim().toLowerCase())
   );
@@ -118,42 +130,29 @@ export default function ShopProducts() {
                 <p className="text-green-600 font-bold mb-3">{Number(p.gia_ban).toLocaleString()}đ</p>
               </div>
 
-              {/* Buttons row: Add to cart (green) + Details (white) */}
-              <div className="px-2 mt-3 flex gap-4 items-center">
-                <button
-                  type="button"
-                  onClick={() => handleAddToCart(p)}
-                  onMouseDown={() => setPressedButton(`${p.id}-add`)}
-                  onMouseUp={() => setPressedButton(null)}
-                  onMouseLeave={() => setPressedButton(null)}
-                  onTouchStart={() => setPressedButton(`${p.id}-add`)}
-                  onTouchEnd={() => setPressedButton(null)}
-                  className={
-                    `flex-1 text-white py-3 text-base rounded-2xl transition transform duration-100 focus:outline-none focus:ring-2 focus:ring-green-300 shadow-sm ` +
-                    (pressedButton === `${p.id}-add`
-                      ? "bg-green-900 scale-95"
-                      : "bg-green-600 hover:bg-green-700 active:bg-green-800")
-                  }
-                >
-                  Thêm giỏ hàng
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleDetails(p)}
-                  onMouseDown={() => setPressedButton(`${p.id}-details`)}
-                  onMouseUp={() => setPressedButton(null)}
-                  onMouseLeave={() => setPressedButton(null)}
-                  onTouchStart={() => setPressedButton(`${p.id}-details`)}
-                  onTouchEnd={() => setPressedButton(null)}
-                  className={
-                    `flex-1 text-gray-800 border border-gray-300 py-3 text-base rounded-2xl transition transform duration-100 focus:outline-none focus:ring-2 focus:ring-gray-200 shadow-sm ` +
-                    (pressedButton === `${p.id}-details`
-                      ? "bg-gray-300 scale-95"
-                      : "bg-white hover:bg-gray-100 active:bg-gray-200")
-                  }
-                >
-                  Chi tiết
-                </button>
+              {/* Buttons row: Add to cart only */}
+              <div className="px-2 mt-3">
+                { (!p.hien_thi || (p.so_luong_ton || 0) <= 0) ? (
+                  <button className="w-full bg-gray-400 text-white py-3 rounded-2xl">Hết hàng</button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => handleAddToCart(p)}
+                    onMouseDown={() => setPressedButton(`${p.id}-add`)}
+                    onMouseUp={() => setPressedButton(null)}
+                    onMouseLeave={() => setPressedButton(null)}
+                    onTouchStart={() => setPressedButton(`${p.id}-add`)}
+                    onTouchEnd={() => setPressedButton(null)}
+                    className={
+                      `w-full text-white py-3 text-base rounded-2xl transition transform duration-100 focus:outline-none focus:ring-2 focus:ring-green-300 shadow-sm ` +
+                      (pressedButton === `${p.id}-add`
+                        ? "bg-green-900 scale-95"
+                        : "bg-green-600 hover:bg-green-700 active:bg-green-800")
+                    }
+                  >
+                    Thêm giỏ hàng
+                  </button>
+                )}
               </div>
             </div>
           </div>

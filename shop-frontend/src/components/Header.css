@@ -35,7 +35,7 @@
   font-weight:500;
 }
 .nav-link:hover{
-  color:#111827;
+  color:#16a34a; /* green-600 */
 }
 .header-right{
   display:flex;
@@ -49,4 +49,6 @@
   color:#374151;
   padding:6px;
 }
-.icon-btn:hover{ color:#111827 }
+.icon-btn:hover{ color:#16a34a }
+
+.header-left:hover .header-name{ color:#16a34a }

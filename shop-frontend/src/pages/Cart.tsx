@@ -20,7 +20,15 @@ export default function Cart() {
   };
 
   const inc = (id: any) => {
-    const next = cart.map((c) => (c.id === id ? { ...c, quantity: (c.quantity || 1) + 1 } : c));
+    const next = cart.map((c) => {
+      if (c.id !== id) return c;
+      const desired = (c.quantity || 1) + 1;
+      if (desired > (c.so_luong_ton || 0)) {
+        alert('Không thể tăng, đã vượt quá tồn kho');
+        return c;
+      }
+      return { ...c, quantity: desired };
+    });
     save(next);
   };
 
@@ -51,21 +59,44 @@ export default function Cart() {
     const user = JSON.parse(userRaw);
 
     try {
-      // create or find customer linked to account
-      const custRes = await axios.post(`${API}/customers`, { ho_ten: user.ho_ten || user.ten_dang_nhap, ma_tai_khoan: user.id }, { headers: { Authorization: `Bearer ${token}` } });
+      // create or find customer linked to account (include phone if provided)
+      const custRes = await axios.post(
+        `${API}/customers`,
+        { ho_ten: user.ho_ten || user.ten_dang_nhap, ma_tai_khoan: user.id, so_dien_thoai: checkoutPhone },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
       const ma_khach_hang = custRes.data.ma_khach_hang;
 
       const chi_tiet = cart.map((c) => ({ ma_san_pham: c.id, so_luong: c.quantity || 1, don_gia: c.gia_ban || c.price || 0 }));
 
-      const orderRes = await axios.post(`${API}/orders`, { ma_khach_hang, tong_tien: total, chi_tiet }, { headers: { Authorization: `Bearer ${token}` } });
+      const orderRes = await axios.post(
+        `${API}/orders`,
+        {
+          ma_khach_hang,
+          tong_tien: total,
+          chi_tiet,
+          ten_nguoi_nhan: checkoutName,
+          so_dien_thoai_nhan: checkoutPhone,
+          dia_chi_nhan: checkoutAddress,
+        },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
       alert('Đặt hàng thành công! Mã đơn: ' + orderRes.data.ma_don_hang);
       save([]);
+      setShowCheckout(false);
       navigate('/');
     } catch (err: any) {
       console.error(err);
       alert(err?.response?.data?.message || 'Lỗi khi đặt hàng');
     }
   };
+
+  const [showCheckout, setShowCheckout] = useState(false);
+  const [checkoutName, setCheckoutName] = useState("");
+  const [checkoutPhone, setCheckoutPhone] = useState("");
+  const [checkoutAddress, setCheckoutAddress] = useState("");
+  const rawUser = localStorage.getItem('user');
+  const currentUser = rawUser ? JSON.parse(rawUser) : null;
 
   // If user was redirected to login for checkout, and now returns with autoCheckout flag,
   // automatically run checkout (only if logged in).
@@ -110,7 +141,37 @@ export default function Cart() {
           <div className="text-right font-semibold">Tổng: {Number(total).toLocaleString()}đ</div>
 
           <div className="text-right">
-            <button onClick={handleCheckout} className="bg-blue-600 text-white px-6 py-2 rounded">Đặt hàng</button>
+            <button onClick={() => {
+              setCheckoutName(currentUser?.ho_ten || currentUser?.ten_dang_nhap || "");
+              setCheckoutPhone(currentUser?.so_dien_thoai || "");
+              setShowCheckout(true);
+            }} className="bg-blue-600 text-white px-6 py-2 rounded">Đặt hàng</button>
+          </div>
+        </div>
+      )}
+      {/* Checkout modal */}
+      {showCheckout && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full shadow-xl">
+            <h3 className="text-xl font-semibold mb-4">Thông tin nhận hàng</h3>
+            <div className="space-y-3">
+              <div>
+                <label className="block text-sm mb-1">Tên người nhận</label>
+                <input className="w-full border rounded px-3 py-2" value={checkoutName} onChange={(e) => setCheckoutName(e.target.value)} />
+              </div>
+              <div>
+                <label className="block text-sm mb-1">Số điện thoại</label>
+                <input className="w-full border rounded px-3 py-2" value={checkoutPhone} onChange={(e) => setCheckoutPhone(e.target.value)} />
+              </div>
+              <div>
+                <label className="block text-sm mb-1">Địa chỉ nhận</label>
+                <input className="w-full border rounded px-3 py-2" value={checkoutAddress} onChange={(e) => setCheckoutAddress(e.target.value)} />
+              </div>
+              <div className="flex justify-end gap-3 pt-3">
+                <button onClick={() => setShowCheckout(false)} className="px-4 py-2 bg-gray-300 rounded">Hủy</button>
+                <button onClick={handleCheckout} className="px-4 py-2 bg-blue-600 text-white rounded">Xác nhận đặt hàng</button>
+              </div>
+            </div>
           </div>
         </div>
       )}

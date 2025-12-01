@@ -1,8 +1,9 @@
 import express from "express";
-import { getProducts, addProduct, updateProduct, toggleProduct, deleteProduct } from "../controllers/productController.js";
+import { getProducts, getProductsAdmin, addProduct, updateProduct, toggleProduct, deleteProduct } from "../controllers/productController.js";
 import requireAdmin from "../middleware/requireAdmin.js";
 const router = express.Router();
 router.get("/", getProducts);
+router.get("/all", requireAdmin, getProductsAdmin);
 router.post("/", requireAdmin, addProduct);
 router.put("/:id", requireAdmin, updateProduct);
 router.patch("/:id/toggle", requireAdmin, toggleProduct);
