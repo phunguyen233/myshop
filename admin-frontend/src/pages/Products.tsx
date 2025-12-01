@@ -111,6 +111,21 @@ export default function Products() {
 
   return (
     <div className="p-6">
+<<<<<<< HEAD
+=======
+      {/* Header với nút thêm sản phẩm */}
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-3xl font-bold">📦 Quản lý sản phẩm</h2>
+        <button
+          onClick={handleAddClick}
+          className="bg-while-500 border hover:bg-green-500 hover:text-white px-6 py-2 rounded-lg font-semibold transition"
+        >
+           Thêm sản phẩm
+        </button>
+      </div>
+
+      {/* Thanh tìm kiếm */}
+>>>>>>> 6a100e634624a6d46c8353fb02f8ed639279e1ee
       <div className="mb-6">
         <h2 className="text-3xl font-bold">📦 Quản lý sản phẩm</h2>
         <div className="flex justify-between items-center mt-4">
@@ -252,6 +267,7 @@ export default function Products() {
                       <img src={p.hinh_anh} alt={p.ten_san_pham} className="w-12 h-12 object-cover rounded mx-auto" />
                     )}
                   </td>
+<<<<<<< HEAD
                   <td className="border p-5">
                     <div className="flex items-center justify-center gap-3">
 
@@ -282,6 +298,21 @@ export default function Products() {
                       </label>
 
                     </div>
+=======
+                  <td className="border p-3 text-center space-x-2">
+                    <button
+                      onClick={() => handleEditClick(p)}
+                      className="bg-while-500 border hover:bg-green-500 hover:text-white px-3 py-1 rounded inline-block transition"
+                    >
+                       Sửa
+                    </button>
+                    <button
+                      onClick={() => handleDeleteClick(p.ma_san_pham)}
+                      className="bg-while-500 border hover:bg-red-600 hover:text-white px-3 py-1 rounded inline-block transition"
+                    >
+                       Xóa
+                    </button>
+>>>>>>> 6a100e634624a6d46c8353fb02f8ed639279e1ee
                   </td>
 
                 </tr>
