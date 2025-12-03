@@ -2,6 +2,7 @@ import db from "../config/db.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { OAuth2Client } from 'google-auth-library';
+import crypto from 'crypto';
 
 export const register = async (req, res) => {
   try {
@@ -86,10 +87,25 @@ export const googleLogin = async (req, res) => {
     const [rows] = await db.query('SELECT * FROM taikhoan WHERE email=?', [email]);
     let user = rows[0];
     if (!user) {
-      // create new user with this email
-      const username = `google_${payload.sub}`;
-      await db.query('INSERT INTO taikhoan (ten_dang_nhap, mat_khau, ho_ten, email) VALUES (?, NULL, ?, ?)', [username, name || null, email || null]);
-      const [newRows] = await db.query('SELECT * FROM taikhoan WHERE ten_dang_nhap=?', [username]);
+      // create new user with this email as the username when available
+      // fallback to google_<sub> if email is missing
+      const username = email ? String(email).split('@')[0] : `google_${payload.sub}`;
+      // Ensure username is unique: if the local-part already exists, fallback to full email or google_<sub>
+      let finalUsername = username;
+      const [check] = await db.query('SELECT * FROM taikhoan WHERE ten_dang_nhap=?', [finalUsername]);
+      if (check.length > 0) {
+        // try using full email as username
+        finalUsername = email || `google_${payload.sub}`;
+        const [check2] = await db.query('SELECT * FROM taikhoan WHERE ten_dang_nhap=?', [finalUsername]);
+        if (check2.length > 0) {
+          finalUsername = `google_${payload.sub}`;
+        }
+      }
+      // Generate a random password for the account (hashed) because `mat_khau` is NOT NULL in your schema
+      const randomPwd = crypto.randomBytes(16).toString('hex');
+      const hashedPwd = await bcrypt.hash(randomPwd, 10);
+      await db.query('INSERT INTO taikhoan (ten_dang_nhap, mat_khau, ho_ten, email) VALUES (?, ?, ?, ?)', [finalUsername, hashedPwd, name || null, email || null]);
+      const [newRows] = await db.query('SELECT * FROM taikhoan WHERE ten_dang_nhap=?', [finalUsername]);
       user = newRows[0];
     }
 
@@ -131,9 +147,21 @@ export const googleCodeLogin = async (req, res) => {
     const [rows] = await db.query('SELECT * FROM taikhoan WHERE email=?', [email]);
     let user = rows[0];
     if (!user) {
-      const username = `google_${payload.sub}`;
-      await db.query('INSERT INTO taikhoan (ten_dang_nhap, mat_khau, ho_ten, email) VALUES (?, NULL, ?, ?)', [username, name || null, email || null]);
-      const [newRows] = await db.query('SELECT * FROM taikhoan WHERE ten_dang_nhap=?', [username]);
+      const username = email ? String(email).split('@')[0] : `google_${payload.sub}`;
+      let finalUsername = username;
+      const [check] = await db.query('SELECT * FROM taikhoan WHERE ten_dang_nhap=?', [finalUsername]);
+      if (check.length > 0) {
+        finalUsername = email || `google_${payload.sub}`;
+        const [check2] = await db.query('SELECT * FROM taikhoan WHERE ten_dang_nhap=?', [finalUsername]);
+        if (check2.length > 0) {
+          finalUsername = `google_${payload.sub}`;
+        }
+      }
+      // Generate a random password for the account (hashed) because `mat_khau` is NOT NULL in your schema
+      const randomPwd2 = crypto.randomBytes(16).toString('hex');
+      const hashedPwd2 = await bcrypt.hash(randomPwd2, 10);
+      await db.query('INSERT INTO taikhoan (ten_dang_nhap, mat_khau, ho_ten, email) VALUES (?, ?, ?, ?)', [finalUsername, hashedPwd2, name || null, email || null]);
+      const [newRows] = await db.query('SELECT * FROM taikhoan WHERE ten_dang_nhap=?', [finalUsername]);
       user = newRows[0];
     }
 

@@ -5,7 +5,7 @@ import { productAPI } from "../api/productAPI";
 const Warehouse: React.FC = () => {
   const [entries, setEntries] = useState<any[]>([]);
   const [products, setProducts] = useState<any[]>([]);
-  const [form, setForm] = useState({ ma_san_pham: 0, so_luong: 0, gia_nhap: 0, don_vi_nhap: "" });
+  const [form, setForm] = useState({ ma_san_pham: 0, so_luong: "", gia_nhap: "" });
 
   const fetchEntries = async () => {
     try {
@@ -33,15 +33,18 @@ const Warehouse: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      // parse numeric values from the text inputs
+      const qty = Number(form.so_luong || 0);
+      const price = Number(form.gia_nhap || 0);
       const payload = {
-        don_vi_nhap: form.don_vi_nhap,
+        don_vi_nhap: "",
         chi_tiet: [
-          { ma_san_pham: form.ma_san_pham, so_luong: form.so_luong, don_gia_nhap: form.gia_nhap },
+          { ma_san_pham: form.ma_san_pham, so_luong: qty, don_gia_nhap: price },
         ],
       };
       await warehouseAPI.create(payload);
       alert("Nhập kho thành công");
-      setForm({ ma_san_pham: 0, so_luong: 0, gia_nhap: 0, don_vi_nhap: "" });
+      setForm({ ma_san_pham: 0, so_luong: "", gia_nhap: "" });
       fetchEntries();
       fetchProducts();
     } catch (err) {
@@ -71,15 +74,11 @@ const Warehouse: React.FC = () => {
             </div>
             <div>
               <label className="block text-sm">Số lượng</label>
-              <input type="number" value={form.so_luong} onChange={(e) => setForm({ ...form, so_luong: Number(e.target.value) })} className="w-full border px-2 py-2 rounded" />
+              <input inputMode="numeric" pattern="[0-9]*" value={form.so_luong} onChange={(e) => setForm({ ...form, so_luong: e.target.value })} className="w-full border px-2 py-2 rounded" />
             </div>
             <div>
               <label className="block text-sm">Giá nhập</label>
-              <input type="number" value={form.gia_nhap} onChange={(e) => setForm({ ...form, gia_nhap: Number(e.target.value) })} className="w-full border px-2 py-2 rounded" />
-            </div>
-            <div>
-              <label className="block text-sm">Đơn vị nhập</label>
-              <input type="text" value={form.don_vi_nhap} onChange={(e) => setForm({ ...form, don_vi_nhap: e.target.value })} className="w-full border px-2 py-2 rounded" />
+              <input inputMode="numeric" pattern="[0-9]*" value={form.gia_nhap} onChange={(e) => setForm({ ...form, gia_nhap: e.target.value })} className="w-full border px-2 py-2 rounded" />
             </div>
             <div>
               <button className="bg-green-600 text-white px-4 py-2 rounded">Nhập kho</button>
@@ -95,17 +94,20 @@ const Warehouse: React.FC = () => {
                 <tr className="bg-gray-200">
                   <th className="border p-2">Mã</th>
                   <th className="border p-2">Thời gian</th>
-                  <th className="border p-2">Đơn vị</th>
+                  <th className="border p-2">Tổng giá trị</th>
                 </tr>
               </thead>
               <tbody>
-                {entries.map((e: any) => (
-                  <tr key={e.ma_nhap} className="hover:bg-gray-50">
-                    <td className="border p-2">{e.ma_nhap}</td>
-                    <td className="border p-2">{e.thoi_gian_nhap}</td>
-                    <td className="border p-2">{e.don_vi_nhap}</td>
-                  </tr>
-                ))}
+                {entries.map((e: any) => {
+                  const totalValue = Number(e.tong_gia_tri || 0);
+                  return (
+                    <tr key={e.ma_nhap} className="hover:bg-gray-50">
+                      <td className="border p-2">{e.ma_nhap}</td>
+                      <td className="border p-2">{e.thoi_gian_nhap}</td>
+                      <td className="border p-2">{totalValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
