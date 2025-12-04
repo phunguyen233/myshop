@@ -9,6 +9,7 @@ import orderRoutes from "./routes/orderRoutes.js";
 import warehouseRoutes from "./routes/warehouseRoutes.js";
 import inventoryRoutes from "./routes/inventoryRoutes.js";
 import authRoutes from "./routes/authRoutes.js";
+import statisticsRoutes from "./routes/statisticsRoutes.js";
 
 dotenv.config();
 
@@ -23,6 +24,7 @@ app.use("/api/orders", orderRoutes);
 app.use("/api/warehouse", warehouseRoutes);
 app.use("/api/inventory", inventoryRoutes);
 app.use("/api/auth", authRoutes);
+app.use("/api/statistics", statisticsRoutes);
 
 app.get("/", (req, res) => {
   res.send("🚀 API Hệ thống quản lý cửa hàng đang hoạt động!");

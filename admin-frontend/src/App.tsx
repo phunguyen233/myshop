@@ -8,6 +8,7 @@ import Customers from "./pages/Customers";
 import Orders from "./pages/Orders";
 import Warehouse from "./pages/Warehouse";
 import Inventory from "./pages/Inventory";
+import Statistics from "./pages/Statistics";
 import Auth from "./pages/Auth";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 
@@ -28,7 +29,8 @@ function InnerApp() {
               <Route path="/customers" element={<RequireAuth><Customers /></RequireAuth>} />
               <Route path="/orders" element={<RequireAuth><Orders /></RequireAuth>} />
               <Route path="/warehouse" element={<RequireAuth><Warehouse /></RequireAuth>} />
-              <Route path="/statistics" element={<RequireAuth><Inventory /></RequireAuth>} />
+              <Route path="/inventory" element={<RequireAuth><Inventory /></RequireAuth>} />
+              <Route path="/statistics" element={<RequireAuth><Statistics /></RequireAuth>} />
               <Route path="*" element={<RequireAuth><Dashboard /></RequireAuth>} />
             </Routes>
           </div>
