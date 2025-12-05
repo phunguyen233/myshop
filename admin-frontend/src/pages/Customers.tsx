@@ -134,7 +134,7 @@ const Customers: React.FC = () => {
         <div className="flex justify-between items-center mt-4">
           <div className="flex items-center gap-2 w-full max-w-lg">
             <input
-              type="text"
+              type="text" 
               placeholder="🔍 Tìm theo tên, mã hoặc số điện thoại..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
