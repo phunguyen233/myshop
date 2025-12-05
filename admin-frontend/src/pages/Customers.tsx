@@ -35,7 +35,7 @@ const Customers: React.FC = () => {
   // Mở form thêm khách hàng
   const handleAddClick = () => {
     setEditingId(null);
-  setFormData({ ma_khach_hang: 0, ho_ten: "", so_dien_thoai: undefined, ma_tai_khoan: undefined } as Customer);
+    setFormData({ ma_khach_hang: 0, ho_ten: "", so_dien_thoai: undefined, ma_tai_khoan: undefined } as Customer);
     setShowForm(true);
   };
 
@@ -61,22 +61,34 @@ const Customers: React.FC = () => {
   };
 
   // (Lịch sử mua hàng được chuyển sang trang Thống kê)
-
+  const validatePhone = (phone: string) => {
+    if (!phone) {
+      alert("Số điện thoại không được để trống.");
+      return false;
+    }
+    if (!/^[0-9]+$/.test(phone)) {
+      alert("Số điện thoại chỉ được chứa chữ số.");
+      return false;
+    }
+    if (phone.length !== 10) {
+      alert("Số điện thoại phải có đúng 10 số.");
+      return false;
+    }
+    return true;
+  };
   // Xử lý submit form
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      const phone = (formData.so_dien_thoai || "").trim();
+      if (!validatePhone(phone)) {
+        return;
+      }
       if (editingId) {
         // Cập nhật khách hàng
         await customerAPI.update(editingId, formData);
         alert("Cập nhật khách hàng thành công!");
       } else {
-        // Thêm khách hàng mới: kiểm tra trùng số điện thoại trước
-        const phone = (formData.so_dien_thoai || "").trim();
-        if (!phone) {
-          alert("Số điện thoại không được để trống.");
-          return;
-        }
         const existsByPhone = customers.some(c => (c.so_dien_thoai || "").trim() === phone);
         if (existsByPhone) {
           alert("Số điện thoại đã tồn tại trong danh sách khách hàng — không thêm được.");
@@ -161,17 +173,17 @@ const Customers: React.FC = () => {
                   required
                 />
               </div>
-                <div>
-                  <label className="block text-sm font-semibold mb-1">Số điện thoại</label>
-                  <input
-                    type="text"
-                    name="so_dien_thoai"
-                    value={formData.so_dien_thoai ?? ""}
-                    onChange={handleInputChange}
-                    className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    required
-                  />
-                </div>
+              <div>
+                <label className="block text-sm font-semibold mb-1">Số điện thoại</label>
+                <input
+                  type="text"
+                  name="so_dien_thoai"
+                  value={formData.so_dien_thoai ?? ""}
+                  onChange={handleInputChange}
+                  className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  required
+                />
+              </div>
               <div className="flex gap-3 pt-4">
                 <button
                   type="submit"
@@ -223,14 +235,14 @@ const Customers: React.FC = () => {
                       onClick={() => handleEditClick(c)}
                       className="bg-white border hover:bg-green-500 hover:text-white px-3 py-1 rounded inline-block transition"
                     >
-                       Sửa
+                      Sửa
                     </button>
-                    
+
                     <button
                       onClick={() => handleDeleteClick(c.ma_khach_hang)}
                       className="bg-white border hover:bg-red-600 hover:text-white px-3 py-1 rounded inline-block transition"
                     >
-                       Xóa
+                      Xóa
                     </button>
                   </td>
                 </tr>
