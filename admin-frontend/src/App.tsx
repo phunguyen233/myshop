@@ -11,6 +11,7 @@ import Inventory from "./pages/Inventory";
 import Statistics from "./pages/Statistics";
 import Auth from "./pages/Auth";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
+import { ThemeProvider } from "./contexts/ThemeContext";
 
 function InnerApp() {
   const { token } = useAuth();
@@ -51,9 +52,11 @@ function InnerApp() {
 
 function App() {
   return (
-    <AuthProvider>
-      <InnerApp />
-    </AuthProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        <InnerApp />
+      </AuthProvider>
+    </ThemeProvider>
   );
 }
 

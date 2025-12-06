@@ -1,5 +1,4 @@
 import axiosClient from "./axiosClient";
-import type { Customer } from "../types/Customer";
 
 export interface OrderItem {
   id?: number;

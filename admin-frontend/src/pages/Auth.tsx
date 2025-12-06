@@ -52,21 +52,21 @@ const Auth: React.FC = () => {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-50 p-4">
-      <div className="bg-white shadow-md rounded px-6 py-6 w-full max-w-md">
-        <h1 className="text-2xl font-bold text-center">Hệ Thống Quản Lý Cửa Hàng</h1>
-        <p className="text-sm text-gray-500 text-center mt-1">Chỉ admin được phép đăng nhập tại đây.</p>
+    <div className="flex items-center justify-center min-h-screen bg-background p-4">
+      <div className="bg-card text-card-foreground shadow-md rounded-xl px-6 py-6 w-full max-w-md border border-border">
+        <h1 className="text-2xl font-bold text-center text-foreground">Hệ Thống Quản Lý Cửa Hàng</h1>
+        <p className="text-sm text-muted-foreground text-center mt-1">Chỉ admin được phép đăng nhập tại đây.</p>
 
         <div className="mt-4">
           <form onSubmit={handleLogin} className="space-y-3">
-            <input className="border p-2 w-full rounded-md bg-transparent" placeholder="Tên đăng nhập" value={username} onChange={(e) => setUsername(e.target.value)} />
-            <input className="border p-2 w-full rounded-md bg-transparent" type="password" placeholder="Mật khẩu" value={password} onChange={(e) => setPassword(e.target.value)} />
+            <input className="border border-input bg-background text-foreground p-2 w-full rounded-md focus:ring-2 focus:ring-ring focus:outline-none" placeholder="Tên đăng nhập" value={username} onChange={(e) => setUsername(e.target.value)} />
+            <input className="border border-input bg-background text-foreground p-2 w-full rounded-md focus:ring-2 focus:ring-ring focus:outline-none" type="password" placeholder="Mật khẩu" value={password} onChange={(e) => setPassword(e.target.value)} />
             <div>
-              {loginError && <p className="text-red-600 text-sm mb-2 text-center">{loginError}</p>}
-              <button type="submit" className="bg-blue-600 text-white w-full py-2 rounded-md hover:bg-blue-700 border border-transparent">Đăng nhập</button>
+              {loginError && <p className="text-destructive text-sm mb-2 text-center">{loginError}</p>}
+              <button type="submit" className="bg-primary text-primary-foreground w-full py-2 rounded-md hover:bg-primary/90 border border-transparent transition shadow-sm">Đăng nhập</button>
             </div>
           </form>
-          <p className="text-xs text-gray-500 mt-3 text-center">Muốn có tài khoản admin? Thêm trực tiếp dữ liệu tài khoản vào cơ sở dữ liệu.</p>
+          <p className="text-xs text-muted-foreground mt-3 text-center">Muốn có tài khoản admin? Thêm trực tiếp dữ liệu tài khoản vào cơ sở dữ liệu.</p>
         </div>
       </div>
     </div>

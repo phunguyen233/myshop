@@ -59,34 +59,34 @@ export default function Statistics() {
   };
 
   return (
-    <div className="p-6 bg-gray-50 min-h-screen">
-      <h1 className="text-3xl font-bold mb-6">Thống kê doanh thu</h1>
+    <div className="p-6 space-y-6">
+      <h1 className="text-3xl font-bold mb-6 text-foreground">Thống kê doanh thu</h1>
 
       {/* Quick Filters */}
-      <div className="bg-white rounded-lg shadow-md p-4 mb-6">
+      <div className="bg-card text-card-foreground rounded-xl shadow-sm border border-border p-4 mb-6">
         <h2 className="text-lg font-semibold mb-3">Lọc nhanh</h2>
         <div className="flex gap-3 flex-wrap">
           <button
             onClick={() => handleQuickFilter(7)}
-            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+            className="px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg transition"
           >
             7 ngày qua
           </button>
           <button
             onClick={() => handleQuickFilter(30)}
-            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+            className="px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg transition"
           >
             30 ngày qua
           </button>
           <button
             onClick={() => handleQuickFilter(90)}
-            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+            className="px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg transition"
           >
             90 ngày qua
           </button>
           <button
             onClick={() => handleQuickFilter(365)}
-            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+            className="px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg transition"
           >
             1 năm qua
           </button>
@@ -94,33 +94,33 @@ export default function Statistics() {
       </div>
 
       {/* Date Range Picker */}
-      <div className="bg-white rounded-lg shadow-md p-4 mb-6">
+      <div className="bg-card text-card-foreground rounded-xl shadow-sm border border-border p-4 mb-6">
         <h2 className="text-lg font-semibold mb-3">Chọn khoảng thời gian</h2>
         <div className="flex gap-4 items-end flex-wrap">
           <div>
-            <label className="block text-sm font-medium mb-1">Từ ngày</label>
+            <label className="block text-sm font-medium mb-1 text-muted-foreground">Từ ngày</label>
             <input
               type="date"
               value={startDate}
               onChange={(e) => setStartDate(e.target.value)}
-              className="px-4 py-2 border border-gray-300 rounded"
+              className="px-4 py-2 border border-input bg-background text-foreground rounded-lg focus:ring-2 focus:ring-ring focus:outline-none"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">Đến ngày</label>
+            <label className="block text-sm font-medium mb-1 text-muted-foreground">Đến ngày</label>
             <input
               type="date"
               value={endDate}
               onChange={(e) => setEndDate(e.target.value)}
-              className="px-4 py-2 border border-gray-300 rounded"
+              className="px-4 py-2 border border-input bg-background text-foreground rounded-lg focus:ring-2 focus:ring-ring focus:outline-none"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">Nhóm theo</label>
+            <label className="block text-sm font-medium mb-1 text-muted-foreground">Nhóm theo</label>
             <select
               value={filterType}
               onChange={(e) => setFilterType(e.target.value as "day" | "month" | "year")}
-              className="px-4 py-2 border border-gray-300 rounded"
+              className="px-4 py-2 border border-input bg-background text-foreground rounded-lg focus:ring-2 focus:ring-ring focus:outline-none"
             >
               <option value="day">Theo ngày</option>
               <option value="month">Theo tháng</option>
@@ -130,7 +130,7 @@ export default function Statistics() {
           <button
             onClick={fetchStatistics}
             disabled={loading}
-            className="px-6 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:bg-gray-400"
+            className="px-6 py-2 bg-secondary hover:bg-secondary/80 text-secondary-foreground rounded-lg transition disabled:opacity-50"
           >
             {loading ? "Đang tải..." : "Tải dữ liệu"}
           </button>
@@ -138,66 +138,68 @@ export default function Statistics() {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-2 gap-4 mb-6">
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <h3 className="text-gray-600 text-sm font-medium">Tổng doanh thu</h3>
-          <p className="text-3xl font-bold text-green-600">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+        <div className="bg-card text-card-foreground rounded-xl shadow-sm border border-border p-6">
+          <h3 className="text-muted-foreground text-sm font-medium">Tổng doanh thu</h3>
+          <p className="text-3xl font-bold text-chart-1">
             {Number(totalRevenue).toLocaleString()}đ
           </p>
         </div>
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <h3 className="text-gray-600 text-sm font-medium">Tổng đơn hàng</h3>
-          <p className="text-3xl font-bold text-blue-600">{totalOrders}</p>
+        <div className="bg-card text-card-foreground rounded-xl shadow-sm border border-border p-6">
+          <h3 className="text-muted-foreground text-sm font-medium">Tổng đơn hàng</h3>
+          <p className="text-3xl font-bold text-chart-2">{totalOrders}</p>
         </div>
       </div>
 
       {/* Statistics Table */}
-      <div className="bg-white rounded-lg shadow-md overflow-hidden">
-        <table className="w-full">
-          <thead className="bg-gray-100 border-b">
-            <tr>
-              <th className="px-6 py-3 text-left font-semibold text-gray-700">
-                {filterType === "day" ? "Ngày" : filterType === "month" ? "Tháng" : "Năm"}
-              </th>
-              <th className="px-6 py-3 text-right font-semibold text-gray-700">
-                Doanh thu
-              </th>
-              <th className="px-6 py-3 text-right font-semibold text-gray-700">
-                Số đơn hàng
-              </th>
-              <th className="px-6 py-3 text-right font-semibold text-gray-700">
-                Doanh thu / đơn
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {statistics.length === 0 ? (
+      <div className="bg-card text-card-foreground rounded-xl shadow-sm border border-border overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-sm">
+            <thead className="bg-muted/50 text-muted-foreground">
               <tr>
-                <td colSpan={4} className="px-6 py-8 text-center text-gray-500">
-                  Không có dữ liệu để hiển thị
-                </td>
+                <th className="px-6 py-3 font-medium">
+                  {filterType === "day" ? "Ngày" : filterType === "month" ? "Tháng" : "Năm"}
+                </th>
+                <th className="px-6 py-3 text-right font-medium">
+                  Doanh thu
+                </th>
+                <th className="px-6 py-3 text-right font-medium">
+                  Số đơn hàng
+                </th>
+                <th className="px-6 py-3 text-right font-medium">
+                  Doanh thu / đơn
+                </th>
               </tr>
-            ) : (
-              statistics.map((stat, idx) => (
-                <tr key={idx} className="border-b hover:bg-gray-50">
-                  <td className="px-6 py-3 text-gray-700">{stat.date}</td>
-                  <td className="px-6 py-3 text-right font-semibold text-green-600">
-                    {Number(stat.revenue).toLocaleString()}đ
-                  </td>
-                  <td className="px-6 py-3 text-right text-gray-700">{stat.orders}</td>
-                  <td className="px-6 py-3 text-right text-gray-600">
-                    {stat.orders > 0
-                      ? Number(stat.revenue / stat.orders).toLocaleString("vi-VN", {
-                          maximumFractionDigits: 0,
-                        })
-                      : 0}
-                    đ
+            </thead>
+            <tbody className="divide-y divide-border">
+              {statistics.length === 0 ? (
+                <tr>
+                  <td colSpan={4} className="px-6 py-8 text-center text-muted-foreground">
+                    Không có dữ liệu để hiển thị
                   </td>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+              ) : (
+                statistics.map((stat, idx) => (
+                  <tr key={idx} className="hover:bg-muted/50 transition-colors">
+                    <td className="px-6 py-3 text-foreground">{stat.date}</td>
+                    <td className="px-6 py-3 text-right font-semibold text-chart-1">
+                      {Number(stat.revenue).toLocaleString()}đ
+                    </td>
+                    <td className="px-6 py-3 text-right text-foreground">{stat.orders}</td>
+                    <td className="px-6 py-3 text-right text-muted-foreground">
+                      {stat.orders > 0
+                        ? Number(stat.revenue / stat.orders).toLocaleString("vi-VN", {
+                          maximumFractionDigits: 0,
+                        })
+                        : 0}
+                      đ
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );

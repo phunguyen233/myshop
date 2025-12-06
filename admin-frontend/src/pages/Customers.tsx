@@ -128,36 +128,33 @@ const Customers: React.FC = () => {
   });
 
   return (
-    <div className="p-6">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold">👥 Quản lý khách hàng</h1>
-        <div className="flex justify-between items-center mt-4">
-          <div className="flex items-center gap-2 w-full max-w-lg">
-            <input
-              type="text" 
-              placeholder="🔍 Tìm theo tên, mã hoặc số điện thoại..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              onKeyDown={(e) => { if (e.key === 'Enter') { /* client-side filter is reactive */ } }}
-            />
-            <button onClick={() => { /* no-op: filter is reactive */ }} className="bg-blue-500 text-white px-4 py-2 rounded">Tìm</button>
-          </div>
-          <div>
-            <button
-              onClick={handleAddClick}
-              className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-semibold"
-            >
-              Thêm khách hàng
-            </button>
-          </div>
-        </div>
+    <div className="p-6 space-y-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <h1 className="text-3xl font-bold text-foreground">👥 Quản lý khách hàng</h1>
+        <button
+          onClick={handleAddClick}
+          className="bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2 rounded-lg font-semibold transition shadow-sm"
+        >
+          Thêm khách hàng
+        </button>
+      </div>
+
+      <div className="flex items-center gap-2 w-full max-w-lg">
+        <input
+          type="text"
+          placeholder="🔍 Tìm theo tên, mã hoặc số điện thoại..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="w-full border border-input bg-background text-foreground rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-ring"
+          onKeyDown={(e) => { if (e.key === 'Enter') { /* client-side filter is reactive */ } }}
+        />
+        <button onClick={() => { /* no-op: filter is reactive */ }} className="bg-secondary text-secondary-foreground hover:bg-secondary/80 px-4 py-2 rounded-lg transition">Tìm</button>
       </div>
 
       {/* Form thêm/sửa khách hàng */}
       {showForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-8 max-w-md w-full shadow-xl">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-card text-card-foreground rounded-lg p-8 max-w-md w-full shadow-xl border border-border">
             <h3 className="text-2xl font-bold mb-6">
               {editingId ? "✏️ Sửa khách hàng" : "Thêm khách hàng mới"}
             </h3>
@@ -169,7 +166,7 @@ const Customers: React.FC = () => {
                   name="ho_ten"
                   value={formData.ho_ten}
                   onChange={handleInputChange}
-                  className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full border border-input bg-background rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-ring"
                   required
                 />
               </div>
@@ -180,21 +177,21 @@ const Customers: React.FC = () => {
                   name="so_dien_thoai"
                   value={formData.so_dien_thoai ?? ""}
                   onChange={handleInputChange}
-                  className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full border border-input bg-background rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-ring"
                   required
                 />
               </div>
               <div className="flex gap-3 pt-4">
                 <button
                   type="submit"
-                  className="flex-1 bg-blue-500 hover:bg-blue-600 text-white py-2 rounded-lg font-semibold transition"
+                  className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground py-2 rounded-lg font-semibold transition"
                 >
                   Lưu
                 </button>
                 <button
                   type="button"
                   onClick={() => setShowForm(false)}
-                  className="flex-1 bg-gray-400 hover:bg-gray-500 text-white py-2 rounded-lg font-semibold transition"
+                  className="flex-1 bg-muted hover:bg-muted/80 text-muted-foreground py-2 rounded-lg font-semibold transition"
                 >
                   Hủy
                 </button>
@@ -206,49 +203,51 @@ const Customers: React.FC = () => {
 
       {/* Danh sách khách hàng */}
       {loading ? (
-        <p className="text-center text-gray-500 py-8">Đang tải dữ liệu...</p>
+        <p className="text-center text-muted-foreground py-8">Đang tải dữ liệu...</p>
       ) : filteredCustomers.length === 0 ? (
-        <p className="text-center text-gray-500 py-8">
+        <p className="text-center text-muted-foreground py-8">
           {customers.length === 0 ? "Chưa có khách hàng nào. Hãy thêm khách hàng mới!" : "Không tìm thấy khách hàng nào."}
         </p>
       ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full border-collapse border">
-            <thead>
-              <tr className="bg-gray-200">
-                <th className="border p-3 text-left">Mã KH</th>
-                <th className="border p-3 text-left">Tên khách hàng</th>
-                <th className="border p-3 text-left">SĐT</th>
-                <th className="border p-3 text-left">Ngày tạo</th>
-                <th className="border p-3 text-center">Hành động</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredCustomers.map((c) => (
-                <tr key={c.ma_khach_hang} className="hover:bg-gray-50">
-                  <td className="border p-3 text-center">{c.ma_khach_hang}</td>
-                  <td className="border p-3 font-semibold">{c.ho_ten}</td>
-                  <td className="border p-3">{c.so_dien_thoai || '-'}</td>
-                  <td className="border p-3">{c.ngay_tao || '-'}</td>
-                  <td className="border p-3 text-center space-x-2">
-                    <button
-                      onClick={() => handleEditClick(c)}
-                      className="bg-white border hover:bg-green-500 hover:text-white px-3 py-1 rounded inline-block transition"
-                    >
-                      Sửa
-                    </button>
-
-                    <button
-                      onClick={() => handleDeleteClick(c.ma_khach_hang)}
-                      className="bg-white border hover:bg-red-600 hover:text-white px-3 py-1 rounded inline-block transition"
-                    >
-                      Xóa
-                    </button>
-                  </td>
+        <div className="bg-card rounded-xl shadow-sm border border-border overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead className="bg-muted/50 text-muted-foreground">
+                <tr>
+                  <th className="p-4 font-medium">Mã KH</th>
+                  <th className="p-4 font-medium">Tên khách hàng</th>
+                  <th className="p-4 font-medium">SĐT</th>
+                  <th className="p-4 font-medium">Ngày tạo</th>
+                  <th className="p-4 font-medium text-center">Hành động</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {filteredCustomers.map((c) => (
+                  <tr key={c.ma_khach_hang} className="hover:bg-muted/50 transition-colors">
+                    <td className="p-4 text-center text-foreground">{c.ma_khach_hang}</td>
+                    <td className="p-4 font-semibold text-foreground">{c.ho_ten}</td>
+                    <td className="p-4 text-foreground">{c.so_dien_thoai || '-'}</td>
+                    <td className="p-4 text-foreground">{c.ngay_tao || '-'}</td>
+                    <td className="p-4 text-center space-x-2">
+                      <button
+                        onClick={() => handleEditClick(c)}
+                        className="bg-card border border-border hover:bg-primary hover:text-primary-foreground text-foreground px-3 py-1 rounded inline-block transition text-xs"
+                      >
+                        Sửa
+                      </button>
+
+                      <button
+                        onClick={() => handleDeleteClick(c.ma_khach_hang)}
+                        className="bg-card border border-border hover:bg-destructive hover:text-destructive-foreground text-foreground px-3 py-1 rounded inline-block transition text-xs"
+                      >
+                        Xóa
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
       {/* Lịch sử mua hàng đã được chuyển sang trang Thống kê */}
