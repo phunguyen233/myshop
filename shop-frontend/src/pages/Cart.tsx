@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { useNavigate, useLocation } from "react-router-dom";
+import PaymentModal from "../components/paymentModal";
 
 const API = "http://localhost:5000/api";
 
@@ -81,10 +82,12 @@ export default function Cart() {
         },
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      alert('Đặt hàng thành công! Mã đơn: ' + orderRes.data.ma_don_hang);
-      save([]);
-      setShowCheckout(false);
-      navigate('/');
+
+      // Instead of clearing cart immediately, open payment modal showing QR and account info
+      const ma_don_hang = orderRes.data.ma_don_hang;
+      setMaDonHang(ma_don_hang);
+      setShowPaymentModal(true);
+      // keep checkout modal open behind payment modal if needed
     } catch (err: any) {
       console.error(err);
       alert(err?.response?.data?.message || 'Lỗi khi đặt hàng');
@@ -95,6 +98,8 @@ export default function Cart() {
   const [checkoutName, setCheckoutName] = useState("");
   const [checkoutPhone, setCheckoutPhone] = useState("");
   const [checkoutAddress, setCheckoutAddress] = useState("");
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [maDonHang, setMaDonHang] = useState<number | null>(null);
   const rawUser = localStorage.getItem('user');
   const currentUser = rawUser ? JSON.parse(rawUser) : null;
 
@@ -173,6 +178,34 @@ export default function Cart() {
               </div>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Payment modal shown after order creation */}
+      {showPaymentModal && maDonHang && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <PaymentModal
+            maDonHang={maDonHang}
+            amount={total}
+            info={`Thanh toán đơn ${maDonHang}`}
+            onClose={() => setShowPaymentModal(false)}
+            onCancelled={(id) => {
+              // after cancellation, clear cart and close modals
+              save([]);
+              setShowPaymentModal(false);
+              setShowCheckout(false);
+              setMaDonHang(null);
+              navigate('/');
+            }}
+            onPaid={(id) => {
+              // when user marks as paid, clear cart and close modals
+              save([]);
+              setShowPaymentModal(false);
+              setShowCheckout(false);
+              setMaDonHang(null);
+              navigate('/');
+            }}
+          />
         </div>
       )}
     </div>

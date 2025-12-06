@@ -65,12 +65,40 @@ export const addOrder = async (req, res) => {
     const ma_don_hang = order.insertId;
 
     // Insert detail rows into chitiet_donhang. Triggers will update stock and history.
+    // Record stock before inserting details so we can detect/neutralize any automatic DB trigger changes
+    const beforeStockMap = {};
     for (const ct of chi_tiet) {
+      if (beforeStockMap[ct.ma_san_pham] === undefined) {
+        const [[row]] = await db.query("SELECT so_luong_ton FROM sanpham WHERE ma_san_pham = ?", [ct.ma_san_pham]);
+        beforeStockMap[ct.ma_san_pham] = row ? Number(row.so_luong_ton) : null;
+      }
       await db.query(
         "INSERT INTO chitiet_donhang (ma_don_hang, ma_san_pham, so_luong, don_gia) VALUES (?, ?, ?, ?)",
         [ma_don_hang, ct.ma_san_pham, ct.so_luong, ct.don_gia]
       );
     }
+
+    // After inserting details, if any DB trigger auto-decremented stock, restore the difference so creation does not change stock.
+    try {
+      for (const ct of chi_tiet) {
+        const [[afterRow]] = await db.query("SELECT so_luong_ton FROM sanpham WHERE ma_san_pham = ?", [ct.ma_san_pham]);
+        const before = beforeStockMap[ct.ma_san_pham];
+        const after = afterRow ? Number(afterRow.so_luong_ton) : null;
+        if (before != null && after != null && after < before) {
+          const diff = before - after;
+          await db.query("UPDATE sanpham SET so_luong_ton = so_luong_ton + ? WHERE ma_san_pham = ?", [diff, ct.ma_san_pham]);
+          await db.query(
+            "INSERT INTO lichsu_tonkho (ma_san_pham, so_luong_thay_doi, ly_do, ngay_thay_doi) VALUES (?, ?, ?, NOW())",
+            [ct.ma_san_pham, diff, `Hoàn trả tạm do tạo đơn ${ma_don_hang}`]
+          );
+        }
+      }
+    } catch (e) {
+      console.error('Warning: failed to neutralize automatic stock changes after order creation', e);
+    }
+
+    // Do NOT change product stock at order creation.
+    // Stock adjustments happen only when order status is updated to 'hoan_tat'.
 
     res.status(201).json({ message: "Tạo đơn hàng thành công", ma_don_hang });
   } catch (err) {
@@ -133,6 +161,8 @@ export const updateOrderStatus = async (req, res) => {
       return res.status(400).json({ message: "Trạng thái không hợp lệ" });
     }
 
+    // Per requirement: do not change stock when updating status here.
+    // Stock will be adjusted by a separate process only when an order is finalized by business rules.
     await db.query("UPDATE donhang SET trang_thai = ? WHERE ma_don_hang = ?", [trang_thai, id]);
 
     const [[order]] = await db.query(
