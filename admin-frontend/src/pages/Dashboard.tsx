@@ -73,8 +73,6 @@ const Dashboard: React.FC = () => {
     price: Number(p.gia_ban) || 0,
     stock: Number(p.so_luong_ton) || 0
   }));
-  console.log("chartData:", chartData);
-
   return (
     <div className="p-6 space-y-8">
       <h1 className="text-3xl font-bold text-foreground">📊 Bảng điều khiển</h1>
