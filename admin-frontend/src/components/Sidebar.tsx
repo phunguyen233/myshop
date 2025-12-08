@@ -9,12 +9,12 @@ export default function Sidebar() {
 
   const linkClass = (path: string) =>
     `flex items-center ${sidebarCollapsed ? "justify-center" : "px-4"} py-2 rounded-md transition-all duration-300 ease-in-out ${isActive(path)
-      ? "bg-sidebar-accent text-sidebar-accent-foreground shadow-sm font-semibold"
-      : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+      ? "bg-gray-200 text-gray-900 shadow-sm font-semibold"
+      : "text-gray-700 hover:bg-gray-200 hover:text-gray-900"
     }`;
 
   return (
-    <aside className={`${sidebarCollapsed ? "w-16" : "w-64"} bg-sidebar text-sidebar-foreground border-r border-sidebar-border sticky top-0 h-screen p-2 flex flex-col transition-all duration-300 ease-in-out overflow-auto z-20`}>
+    <aside className={`${sidebarCollapsed ? "w-16" : "w-64"} bg-gray-100 text-gray-800 border-r border-gray-200 sticky top-0 h-screen p-2 flex flex-col transition-all duration-300 ease-in-out overflow-auto z-20`}>
       {!sidebarCollapsed && (
         <h2 className="text-2xl font-bold mb-6 text-center text-sidebar-foreground">Admin</h2>
       )}
@@ -72,7 +72,7 @@ export default function Sidebar() {
       {/* Bottom area: user name and logout */}
       <div className="mt-auto">
         {!sidebarCollapsed ? (
-          <div className="border-t border-sidebar-border pt-4 px-3">
+            <div className="border-t border-gray-200 pt-4 px-3">
             <UserLogout />
           </div>
         ) : (
@@ -101,10 +101,10 @@ function UserLogout() {
 
   return (
     <div className="text-left">
-      <p className="text-sm font-medium mb-2 text-sidebar-foreground">{user?.ho_ten || user?.ten_dang_nhap || "Người dùng"}</p>
+      <p className="text-sm font-medium mb-2 text-gray-800">{user?.ho_ten || user?.ten_dang_nhap || "Người dùng"}</p>
       <button
         onClick={handleLogout}
-        className="w-full bg-sidebar text-sidebar-foreground border border-sidebar-border py-2 rounded-md font-semibold transition hover:bg-destructive hover:text-destructive-foreground"
+        className="w-full bg-gray-100 text-gray-800 border border-gray-200 py-2 rounded-md font-semibold transition hover:bg-red-600 hover:text-white"
       >
         Đăng xuất
       </button>
@@ -120,7 +120,7 @@ function SmallLogoutIcon() {
     navigate('/login');
   };
   return (
-    <button onClick={handleLogout} className="p-2 rounded-md bg-sidebar text-sidebar-foreground border border-sidebar-border hover:bg-destructive hover:text-destructive-foreground">
+    <button onClick={handleLogout} className="p-2 rounded-md bg-gray-100 text-gray-800 border border-gray-200 hover:bg-red-600 hover:text-white">
       <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
         <path fillRule="evenodd" d="M3 4a1 1 0 011-1h6a1 1 0 110 2H5v10h5a1 1 0 110 2H4a1 1 0 01-1-1V4z" clipRule="evenodd" />
         <path d="M14 7l3 3m0 0l-3 3m3-3H9" />

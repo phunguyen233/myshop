@@ -161,16 +161,54 @@ export const updateOrderStatus = async (req, res) => {
       return res.status(400).json({ message: "Trạng thái không hợp lệ" });
     }
 
-    // Per requirement: do not change stock when updating status here.
-    // Stock will be adjusted by a separate process only when an order is finalized by business rules.
-    await db.query("UPDATE donhang SET trang_thai = ? WHERE ma_don_hang = ?", [trang_thai, id]);
+    // If transitioning to 'hoan_tat' from a non-completed state, deduct stock for items in the order.
+    const connection = await db.getConnection();
+    try {
+      await connection.beginTransaction();
 
-    const [[order]] = await db.query(
-      "SELECT d.ma_don_hang, d.ma_khach_hang, d.ten_nguoi_nhan, d.so_dien_thoai_nhan, d.dia_chi_nhan, d.tong_tien, d.trang_thai, DATE_FORMAT(CONVERT_TZ(d.thoi_gian_mua, @@session.time_zone, '+07:00'), '%Y-%m-%d %H:%i:%s') as thoi_gian_mua, k.ho_ten as ten_khach_hang, k.so_dien_thoai as khach_so_dien_thoai FROM donhang d LEFT JOIN khachhang k ON d.ma_khach_hang = k.ma_khach_hang WHERE d.ma_don_hang = ?",
-      [id]
-    );
+      const [[current]] = await connection.query("SELECT trang_thai FROM donhang WHERE ma_don_hang = ? FOR UPDATE", [id]);
+      if (!current) {
+        await connection.rollback();
+        return res.status(404).json({ message: "Đơn hàng không tồn tại" });
+      }
 
-    res.json({ message: "Cập nhật trạng thái thành công", order });
+      const prevStatus = current.trang_thai;
+
+      // If moving into 'hoan_tat' from a different state, apply stock deduction
+      if (prevStatus !== 'hoan_tat' && trang_thai === 'hoan_tat') {
+        // Get order items
+        const [items] = await connection.query("SELECT ma_san_pham, so_luong FROM chitiet_donhang WHERE ma_don_hang = ?", [id]);
+        for (const it of items) {
+          const qty = Number(it.so_luong || 0);
+          if (qty <= 0) continue;
+          // Decrease stock but never set below 0
+          await connection.query("UPDATE sanpham SET so_luong_ton = GREATEST(0, so_luong_ton - ?) WHERE ma_san_pham = ?", [qty, it.ma_san_pham]);
+          // Insert stock history (negative change)
+          await connection.query(
+            "INSERT INTO lichsu_tonkho (ma_san_pham, so_luong_thay_doi, ly_do, ngay_thay_doi) VALUES (?, ?, ?, NOW())",
+            [it.ma_san_pham, -qty, `Trừ tồn khi hoàn tất đơn ${id}`]
+          );
+        }
+      }
+
+      // Update order status
+      await connection.query("UPDATE donhang SET trang_thai = ? WHERE ma_don_hang = ?", [trang_thai, id]);
+
+      await connection.commit();
+
+      const [[order]] = await db.query(
+        "SELECT d.ma_don_hang, d.ma_khach_hang, d.ten_nguoi_nhan, d.so_dien_thoai_nhan, d.dia_chi_nhan, d.tong_tien, d.trang_thai, DATE_FORMAT(CONVERT_TZ(d.thoi_gian_mua, @@session.time_zone, '+07:00'), '%Y-%m-%d %H:%i:%s') as thoi_gian_mua, k.ho_ten as ten_khach_hang, k.so_dien_thoai as khach_so_dien_thoai FROM donhang d LEFT JOIN khachhang k ON d.ma_khach_hang = k.ma_khach_hang WHERE d.ma_don_hang = ?",
+        [id]
+      );
+
+      res.json({ message: "Cập nhật trạng thái thành công", order });
+    } catch (e) {
+      await connection.rollback();
+      console.error(e);
+      res.status(500).json({ message: "Lỗi khi cập nhật trạng thái đơn" });
+    } finally {
+      connection.release();
+    }
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Lỗi khi cập nhật trạng thái đơn" });

@@ -59,6 +59,20 @@ export default function Cart() {
 
     const user = JSON.parse(userRaw);
 
+    // Validate checkout fields before creating order
+    const fieldErrs: { name?: string; phone?: string; address?: string } = {};
+    if (!checkoutName || !checkoutName.trim()) fieldErrs.name = 'Vui lòng nhập tên người nhận';
+    const phoneRe = /^[0-9\+\-\s]{7,20}$/;
+    if (!checkoutPhone || !phoneRe.test(checkoutPhone)) fieldErrs.phone = 'Số điện thoại không hợp lệ';
+    if (!checkoutAddress || !checkoutAddress.trim()) fieldErrs.address = 'Vui lòng nhập địa chỉ nhận hàng';
+    if (Object.keys(fieldErrs).length) {
+      setCheckoutFieldErrors(fieldErrs);
+      const missing = Object.values(fieldErrs).join('\n');
+      alert('Vui lòng hoàn thành thông tin nhận hàng:\n' + missing);
+      return;
+    }
+    setCheckoutFieldErrors({});
+
     try {
       // create or find customer linked to account (include phone if provided)
       const custRes = await axios.post(
@@ -98,6 +112,7 @@ export default function Cart() {
   const [checkoutName, setCheckoutName] = useState("");
   const [checkoutPhone, setCheckoutPhone] = useState("");
   const [checkoutAddress, setCheckoutAddress] = useState("");
+  const [checkoutFieldErrors, setCheckoutFieldErrors] = useState<{ name?: string; phone?: string; address?: string }>({});
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [maDonHang, setMaDonHang] = useState<number | null>(null);
   const rawUser = localStorage.getItem('user');
@@ -162,15 +177,18 @@ export default function Cart() {
             <div className="space-y-3">
               <div>
                 <label className="block text-sm mb-1">Tên người nhận</label>
-                <input className="w-full border rounded px-3 py-2" value={checkoutName} onChange={(e) => setCheckoutName(e.target.value)} />
+                <input className={`w-full border rounded px-3 py-2 ${checkoutFieldErrors.name ? 'border-red-500' : ''}`} value={checkoutName} onChange={(e) => setCheckoutName(e.target.value)} />
+                {checkoutFieldErrors.name && <p className="text-red-600 text-xs mt-1">{checkoutFieldErrors.name}</p>}
               </div>
               <div>
                 <label className="block text-sm mb-1">Số điện thoại</label>
-                <input className="w-full border rounded px-3 py-2" value={checkoutPhone} onChange={(e) => setCheckoutPhone(e.target.value)} />
+                <input className={`w-full border rounded px-3 py-2 ${checkoutFieldErrors.phone ? 'border-red-500' : ''}`} value={checkoutPhone} onChange={(e) => setCheckoutPhone(e.target.value)} />
+                {checkoutFieldErrors.phone && <p className="text-red-600 text-xs mt-1">{checkoutFieldErrors.phone}</p>}
               </div>
               <div>
                 <label className="block text-sm mb-1">Địa chỉ nhận</label>
-                <input className="w-full border rounded px-3 py-2" value={checkoutAddress} onChange={(e) => setCheckoutAddress(e.target.value)} />
+                <input className={`w-full border rounded px-3 py-2 ${checkoutFieldErrors.address ? 'border-red-500' : ''}`} value={checkoutAddress} onChange={(e) => setCheckoutAddress(e.target.value)} />
+                {checkoutFieldErrors.address && <p className="text-red-600 text-xs mt-1">{checkoutFieldErrors.address}</p>}
               </div>
               <div className="flex justify-end gap-3 pt-3">
                 <button onClick={() => setShowCheckout(false)} className="px-4 py-2 bg-gray-300 rounded">Hủy</button>

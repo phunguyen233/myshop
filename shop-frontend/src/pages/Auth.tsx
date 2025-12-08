@@ -91,6 +91,16 @@ export default function Auth() {
     if (!phone.trim() || !phoneRe.test(phone)) errs.so_dien_thoai = "Số điện thoại không hợp lệ";
     if (Object.keys(errs).length) {
       setRegisterFieldErrors(errs);
+      // Build a user-friendly list of missing/invalid fields for an alert
+      const labelMap: { [k: string]: string } = {
+        ten_dang_nhap: 'Tên đăng nhập',
+        mat_khau: 'Mật khẩu',
+        ho_ten: 'Họ tên',
+        email: 'Email',
+        so_dien_thoai: 'Số điện thoại',
+      };
+      const msgs = Object.entries(errs).map(([k, v]) => `${labelMap[k] || k}: ${v}`);
+      alert('Vui lòng sửa các lỗi sau trước khi đăng ký:\n' + msgs.join('\n'));
       return;
     }
     try {

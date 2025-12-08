@@ -112,7 +112,7 @@ const Inventory: React.FC = () => {
             <div className="mb-6 bg-card text-card-foreground rounded-xl shadow-sm border border-border p-6">
                 <h2 className="text-xl font-semibold mb-3">📜 Lịch sử mua hàng của khách hàng</h2>
                 <div className="flex items-center gap-3 mb-4">
-                    <select value={selectedCustomer ?? ""} onChange={(e) => setSelectedCustomer(e.target.value ? Number(e.target.value) : null)} className="border border-input bg-background text-foreground px-3 py-2 rounded-lg focus:ring-2 focus:ring-ring focus:outline-none">
+                    <select value={selectedCustomer ?? ""} onChange={(e) => setSelectedCustomer(e.target.value ? Number(e.target.value) : null)} className="border border-input bg-background text-foreground px-3 py-2 rounded-lg focus:ring-2 focus:ring-black focus:outline-none">
                         <option value="">-- Chọn khách hàng --</option>
                         {customers.map((c: any) => (
                             <option key={c.ma_khach_hang} value={c.ma_khach_hang}>{c.ho_ten} (#{c.ma_khach_hang})</option>

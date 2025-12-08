@@ -3,103 +3,141 @@ import { motion } from "framer-motion";
 
 export default function AboutPage() {
   return (
-    <div className="w-full flex flex-col items-center">
-      {/* HERO SECTION */}
-      <section className="relative w-full h-[60vh] md:h-[70vh] flex flex-col justify-end overflow-hidden">
-        <img
-          src="/images/about-hero.jpg"
-          alt="Giới thiệu Bếp Mầm"
-          className="absolute inset-0 w-full h-full object-cover"
-        />
-        <div className="relative z-10 bg-black/50 w-full text-center text-white p-6 md:p-12">
-          <motion.h1
-            initial={{ opacity: 0, y: 40 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8 }}
-            className="text-4xl md:text-5xl font-bold mb-4"
-          >
-            Về Bếp Mầm
-          </motion.h1>
-          <motion.p
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.4, duration: 0.8 }}
-            className="text-lg md:text-xl max-w-2xl mx-auto"
-          >
-            Mang đến trải nghiệm sữa hạt nguyên chất, tươi ngon mỗi ngày cho mọi gia đình.
-          </motion.p>
+    <div className="w-full flex flex-col items-center text-[#0a2c1f]">
+      {/* HERO */}
+      <section className="w-full max-w-6xl grid grid-cols-1 md:grid-cols-2 gap-10 py-16 px-6">
+        <div className="rounded-3xl overflow-hidden shadow-lg">
+          <img
+            src="/assets/bepmam-hero.jpg"
+            alt="Bếp Mầm"
+            className="w-full h-full object-cover"
+          />
+        </div>
+
+        <div className="flex flex-col justify-center">
+          <h2 className="text-4xl font-bold mb-4">CÂU CHUYỆN THƯƠNG HIỆU</h2>
+          <h3 className="text-3xl font-semibold text-green-600 mb-4">BẾP MẦM</h3>
+          <p className="text-lg leading-relaxed mb-4">
+            Bếp Mầm được thành lập với sứ mệnh mang đến các sản phẩm dinh dưỡng
+            lành mạnh như sữa hạt, detox, nước ép và thực phẩm tốt cho sức khỏe.
+            Với sự tâm huyết trong từng nguyên liệu, chúng tôi mong muốn mang lại
+            những giá trị bền vững và nâng cao chất lượng cuộc sống cho cộng đồng.
+          </p>
+          <p className="text-lg leading-relaxed">
+            Từ những ngày đầu tiên, Bếp Mầm luôn hướng đến sự tự nhiên, tinh khiết
+            và đảm bảo chất lượng trong từng sản phẩm. Chúng tôi đang mở rộng hệ
+            thống phân phối, phục vụ hàng nghìn khách hàng mỗi năm.
+          </p>
         </div>
       </section>
 
-      {/* GIỚI THIỆU NỘI DUNG */}
-      <section className="w-full max-w-5xl px-4 py-16">
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.8 }}
-          className="bg-white rounded-2xl shadow-xl p-6 md:p-10"
-        >
-          <h2 className="text-2xl md:text-3xl font-bold mb-4">Sứ mệnh & Giá trị</h2>
-          <p className="text-gray-600 text-lg leading-relaxed mb-4">
-            Bếp Mầm ra đời với sứ mệnh mang lại những sản phẩm sữa hạt tươi nguyên chất, đảm bảo chất lượng, dinh dưỡng và an toàn cho sức khỏe. Chúng tôi tin rằng mỗi ly sữa là một trải nghiệm tận hưởng sự tinh túy từ thiên nhiên.
-          </p>
-          <ul className="list-disc pl-6 text-gray-700 space-y-2">
-            <li>Chất lượng: Nguyên liệu sạch, quy trình chuẩn.</li>
-            <li>Sáng tạo: Đa dạng sản phẩm, hương vị độc đáo.</li>
-            <li>Khách hàng: Luôn đặt trải nghiệm khách hàng lên hàng đầu.</li>
-            <li>Bền vững: Cam kết thân thiện với môi trường.</li>
-          </ul>
-        </motion.div>
-      </section>
-
-      {/* HÌNH ẢNH TEAM / CỬA HÀNG */}
-      <section className="w-full max-w-6xl px-4 py-16 grid grid-cols-1 md:grid-cols-3 gap-6">
-        {["team1.jpg", "team2.jpg", "store.jpg"].map((img, i) => (
-          <motion.div
+      {/* NUMBERS */}
+      <section className="w-full max-w-6xl grid grid-cols-2 md:grid-cols-4 gap-6 py-10 px-6">
+        {[
+          { number: "10K+", label: "Lượt khách" },
+          { number: "30+", label: "Sản phẩm" },
+          { number: "2021", label: "Thành lập" },
+          { number: "4.9★", label: "Đánh giá" },
+        ].map((item, i) => (
+          <div
             key={i}
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6, delay: i * 0.15 }}
-            className="overflow-hidden rounded-2xl shadow-lg"
+            className="flex flex-col items-center bg-white shadow-md rounded-2xl p-6"
           >
-            <img
-              src={`/images/${img}`}
-              alt="Hình Bếp Mầm"
-              className="w-full h-64 object-cover transition-transform duration-500 hover:scale-110"
-            />
-          </motion.div>
+            <div className="text-3xl font-bold text-green-600">{item.number}</div>
+            <div className="mt-2 text-lg font-medium">{item.label}</div>
+          </div>
         ))}
       </section>
 
-      {/* LỊCH SỬ / TIMELINE (OPTIONAL) */}
-      <section className="w-full max-w-5xl px-4 py-16">
-        <motion.h2
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6 }}
-          className="text-2xl md:text-3xl font-bold mb-8 text-center"
-        >
-          Hành trình phát triển
-        </motion.h2>
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8 }}
-          className="bg-white rounded-2xl shadow-xl p-6 md:p-10"
-        >
-          <ul className="space-y-4 text-gray-700">
-            <li><strong>2018:</strong> Thành lập Bếp Mầm với cửa hàng đầu tiên tại Hà Nội.</li>
-            <li><strong>2019:</strong> Ra mắt sản phẩm sữa hạt óc chó và nước detox.</li>
-            <li><strong>2021:</strong> Mở rộng cửa hàng, phục vụ khách hàng văn phòng và gia đình.</li>
-            <li><strong>2023:</strong> Chuỗi Bếp Mầm phát triển mạnh với dịch vụ online và offline.</li>
-          </ul>
-        </motion.div>
+      {/* VISION - MISSION */}
+      <section className="w-full max-w-6xl py-16 px-6">
+        <h2 className="text-3xl font-bold mb-6">TẦM NHÌN & SỨ MỆNH</h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="bg-gradient-to-b from-green-500 to-green-700 text-white rounded-3xl p-6 shadow-lg">
+            <h3 className="text-xl font-semibold mb-3">GIÁ TRỊ THƯƠNG HIỆU</h3>
+            <p>Bếp Mầm cam kết cung cấp sản phẩm chất lượng và an toàn nhất.</p>
+          </div>
+          <div className="bg-gradient-to-b from-green-500 to-green-700 text-white rounded-3xl p-6 shadow-lg">
+            <h3 className="text-xl font-semibold mb-3">TIN TƯỞNG ĐỒNG HÀNH</h3>
+            <p>Luôn lắng nghe và hoàn thiện để mang đến trải nghiệm tốt nhất.</p>
+          </div>
+          <div className="bg-gradient-to-b from-green-500 to-green-700 text-white rounded-3xl p-6 shadow-lg">
+            <h3 className="text-xl font-semibold mb-3">PHÁT TRIỂN BỀN VỮNG</h3>
+            <p>Mở rộng và phát triển các dòng sản phẩm có lợi cho sức khỏe.</p>
+          </div>
+        </div>
       </section>
 
-      <div className="h-20" />
+      {/* MAIN PRODUCTS */}
+      <section className="w-full max-w-6xl py-16 px-6">
+        <h2 className="text-3xl font-bold mb-10">3 DÒNG SẢN PHẨM CHÍNH</h2>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {[
+            {
+              id: 1,
+              title: "SỮA HẠT",
+              desc: "Sữa hạt nguyên chất tốt cho sức khỏe, phù hợp mọi độ tuổi.",
+              img: "/assets/suahatt.png",
+            },
+            {
+              id: 2,
+              title: "NƯỚC ÉP",
+              desc: "Nước ép trái cây tươi bổ sung vitamin mỗi ngày.",
+              img: "/assets/nuocep.png",
+            },
+            {
+              id: 3,
+              title: "DETOX",
+              desc: "Detox thanh lọc cơ thể, cải thiện hệ miễn dịch.",
+              img: "/assets/detox.png",
+            },
+          ].map((item) => (
+            <div
+              key={item.id}
+              className="bg-gradient-to-r from-green-600 to-green-400 text-white rounded-3xl p-6 flex flex-col shadow-xl relative overflow-hidden"
+            >
+              <div className="text-3xl font-bold mb-4">0{item.id}</div>
+              <h3 className="text-2xl font-semibold mb-3">{item.title}</h3>
+              <p className="mb-4">{item.desc}</p>
+              <img
+                src={item.img}
+                alt={item.title}
+                className="w-32 absolute bottom-4 right-4 drop-shadow-lg"
+              />
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* CORE DEVELOPMENT */}
+      <section className="w-full max-w-6xl py-16 px-6 grid grid-cols-1 md:grid-cols-2 gap-10">
+        <img
+          src="/assets/coredev.png"
+          alt="Phát triển cốt lõi"
+          className="rounded-3xl shadow-xl"
+        />
+
+        <div className="flex flex-col gap-6">
+          <h2 className="text-3xl font-bold">PHÁT TRIỂN CỐT LÕI</h2>
+
+          <div className="bg-white border border-green-600 rounded-2xl p-6 shadow-md">
+            <h3 className="text-xl font-semibold mb-2 text-green-700">CÔNG THỨC SÁNG TẠO</h3>
+            <p>
+              Công thức chế biến được cập nhật liên tục để mang đến chất lượng tốt
+              nhất cho khách hàng.
+            </p>
+          </div>
+
+          <div className="bg-white border border-green-600 rounded-2xl p-6 shadow-md">
+            <h3 className="text-xl font-semibold mb-2 text-green-700">ỨNG DỤNG CÔNG NGHỆ</h3>
+            <p>
+              Công nghệ hiện đại được áp dụng để tối ưu quy trình sản xuất và trải
+              nghiệm khách hàng.
+            </p>
+          </div>
+        </div>
+      </section>
     </div>
   );
 }

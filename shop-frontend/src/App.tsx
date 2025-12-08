@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import './App.css';
 import Header from './components/Header';
+import Footer from './components/Footer';
 import Home from './pages/Home';
 import ShopProducts from './pages/ShopProducts';
 import About from './pages/About';
@@ -28,6 +29,7 @@ function App() {
             <Route path="/auth/*" element={<Auth />} />
           </Routes>
         </main>
+        <Footer />
       </div>
     </BrowserRouter>
   );

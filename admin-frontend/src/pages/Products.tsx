@@ -15,6 +15,7 @@ export default function Products() {
     so_luong_ton: 0,
     hinh_anh: "",
   });
+  const [productFieldErrors, setProductFieldErrors] = useState<{ ten_san_pham?: string; gia_ban?: string; }>({});
 
   // Lấy danh sách sản phẩm
   const fetchProducts = async () => {
@@ -76,6 +77,18 @@ export default function Products() {
   // Xử lý submit form
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    // client-side validation
+    const errs: { ten_san_pham?: string; gia_ban?: string } = {};
+    if (!formData.ten_san_pham || !formData.ten_san_pham.trim()) errs.ten_san_pham = 'Vui lòng nhập tên sản phẩm';
+    if (!formData.gia_ban || Number(formData.gia_ban) <= 0) errs.gia_ban = 'Vui lòng nhập giá bán hợp lệ';
+    if (Object.keys(errs).length) {
+      setProductFieldErrors(errs);
+      const msgs = Object.values(errs).join('\n');
+      alert('Vui lòng hoàn thành thông tin sản phẩm:\n' + msgs);
+      return;
+    }
+    setProductFieldErrors({});
+
     try {
       if (editingId) {
         // Cập nhật sản phẩm
@@ -112,25 +125,29 @@ export default function Products() {
   return (
     <div className="p-6 space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <h2 className="text-3xl font-bold text-foreground">📦 Quản lý sản phẩm</h2>
-        <button
-          onClick={handleAddClick}
-          className="bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2 rounded-lg font-semibold transition shadow-sm"
-        >
-          Thêm sản phẩm
-        </button>
+        <h2 className="text-3xl font-bold text-foreground"> Quản lý sản phẩm</h2>
       </div>
 
-      <div className="flex items-center gap-2 w-full max-w-lg">
-        <input
-          type="text"
-          placeholder="🔍 Tìm kiếm theo tên, mã sản phẩm..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="w-full border border-input bg-background text-foreground rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-ring"
-          onKeyDown={(e) => { if (e.key === 'Enter') { /* client-side filter reactive */ } }}
-        />
-        <button onClick={() => { }} className="bg-secondary text-secondary-foreground hover:bg-secondary/80 px-4 py-2 rounded-lg transition">Tìm</button>
+      <div className="flex items-center justify-between w-full">
+        <div className="flex items-center gap-2">
+          <input
+            type="text"
+            placeholder="Tìm kiếm theo tên, mã..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-64 border border-input bg-background text-foreground rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-600"
+            onKeyDown={(e) => { if (e.key === 'Enter') { /* client-side filter reactive */ } }}
+          />
+          <button onClick={() => { }} className="bg-gray-200 text-gray-800 hover:bg-gray-300 px-3 py-2 rounded-lg transition">Tìm</button>
+        </div>
+        <div>
+          <button
+            onClick={handleAddClick}
+            className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg font-semibold transition shadow-sm"
+          >
+            Thêm sản phẩm
+          </button>
+        </div>
       </div>
 
       {/* Form thêm/sửa sản phẩm */}
@@ -148,9 +165,10 @@ export default function Products() {
                   name="ten_san_pham"
                   value={formData.ten_san_pham}
                   onChange={handleInputChange}
-                  className="w-full border border-input bg-background rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-ring"
+                  className={`w-full border border-input bg-background rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-black ${productFieldErrors.ten_san_pham ? 'border-red-500' : ''}`}
                   required
                 />
+                {productFieldErrors.ten_san_pham && <p className="text-red-600 text-xs mt-1">{productFieldErrors.ten_san_pham}</p>}
               </div>
               <div>
                 <label className="block text-sm font-semibold mb-1">Giá bán (₫)</label>
@@ -159,21 +177,12 @@ export default function Products() {
                   name="gia_ban"
                   value={formData.gia_ban}
                   onChange={handleInputChange}
-                  className="w-full border border-input bg-background rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-ring"
+                  className={`w-full border border-input bg-background rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-black ${productFieldErrors.gia_ban ? 'border-red-500' : ''}`}
                   required
                 />
+                {productFieldErrors.gia_ban && <p className="text-red-600 text-xs mt-1">{productFieldErrors.gia_ban}</p>}
               </div>
-              <div>
-                <label className="block text-sm font-semibold mb-1">Số lượng tồn</label>
-                <input
-                  type="number"
-                  name="so_luong_ton"
-                  value={formData.so_luong_ton}
-                  onChange={handleInputChange}
-                  className="w-full border border-input bg-background rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-ring"
-                  required
-                />
-              </div>
+              {/* Removed Số lượng tồn input as requested */}
               <div>
                 <label className="block text-sm font-semibold mb-1">URL Hình ảnh</label>
                 <input
@@ -181,20 +190,20 @@ export default function Products() {
                   name="hinh_anh"
                   value={formData.hinh_anh}
                   onChange={handleInputChange}
-                  className="w-full border border-input bg-background rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-ring"
+                  className="w-full border border-input bg-background rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-black"
                 />
               </div>
               <div className="flex gap-3 pt-4">
                 <button
                   type="submit"
-                  className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground py-2 rounded-lg font-semibold transition"
+                  className="flex-1 bg-green-600 hover:bg-green-700 text-white py-2 rounded-lg font-semibold transition"
                 >
                   Lưu
                 </button>
                 <button
                   type="button"
                   onClick={() => setShowForm(false)}
-                  className="flex-1 bg-muted hover:bg-muted/80 text-muted-foreground py-2 rounded-lg font-semibold transition"
+                  className="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-800 py-2 rounded-lg font-semibold transition"
                 >
                   Hủy
                 </button>
@@ -239,8 +248,7 @@ export default function Products() {
                     </td>
                     <td className="p-4 text-center text-foreground">{p.gia_ban.toLocaleString("vi-VN")}₫</td>
                     <td className="p-4 text-center">
-                      <span className={`px-3 py-1 rounded-full text-xs font-semibold ${p.so_luong_ton > 0 ? "bg-primary/20 text-primary" : "bg-destructive/20 text-destructive"
-                        }`}>
+                      <span className={`px-3 py-1 rounded-full text-xs font-semibold ${p.so_luong_ton < 5 ? "bg-red-100 text-red-600" : "bg-green-100 text-green-600"}`}>
                         {p.so_luong_ton}
                       </span>
                     </td>
@@ -253,14 +261,14 @@ export default function Products() {
                       <div className="flex items-center justify-center gap-2">
                         <button
                           onClick={() => handleEditClick(p)}
-                          className="bg-card border border-border hover:bg-primary hover:text-primary-foreground text-foreground px-3 py-1 rounded transition text-xs"
+                          className="bg-white border border-border hover:bg-green-600 hover:text-white text-foreground px-3 py-1 rounded transition text-xs"
                         >
                           Sửa
                         </button>
 
                         <button
                           onClick={() => handleDeleteClick(p.ma_san_pham)}
-                          className="bg-card border border-border hover:bg-destructive hover:text-destructive-foreground text-foreground px-3 py-1 rounded transition text-xs"
+                          className="bg-white border border-border hover:bg-red-600 hover:text-white text-foreground px-3 py-1 rounded transition text-xs"
                         >
                           Xóa
                         </button>
@@ -273,8 +281,8 @@ export default function Products() {
                             checked={p.trang_thai === "hien"}
                             onChange={() => handleToggleVisibility(p.ma_san_pham)}
                           />
-                          <div className="w-9 h-5 bg-muted rounded-full peer-checked:bg-primary transition"></div>
-                          <div className="absolute left-1 top-1 bg-card w-3 h-3 rounded-full shadow transform peer-checked:translate-x-4 transition"></div>
+                          <div className="w-9 h-5 bg-gray-300 rounded-full peer-checked:bg-green-600 transition"></div>
+                          <div className="absolute left-1 top-1 bg-white w-3 h-3 rounded-full shadow transform peer-checked:translate-x-4 transition"></div>
                         </label>
                       </div>
                     </td>

@@ -59,7 +59,7 @@ export default function PaymentModal({ maDonHang = null, amount: initAmount = 0,
       setLoading(true);
       const res = await axios.post(`http://localhost:5000/api/payment/cancel`, { ma_don_hang: maDonHang });
       if (res.data && res.data.success) {
-        alert("Đã hủy đơn hàng và hoàn trả tồn kho.");
+        alert("Đã hủy đơn hàng.");
         onCancelled && onCancelled(maDonHang);
         onClose && onClose();
       } else {

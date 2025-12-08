@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import logo from "../logo.svg";
+import logo from "../logobepmam.jpg";
 import "./Header.css";
 
 export default function Header() {
@@ -56,7 +56,7 @@ export default function Header() {
     <header className="site-header">
       <div className="header-left" onClick={() => navigate('/')}>
         <img src={logo} alt="Logo" className="header-logo" />
-        <span className="header-name">MyShop</span>
+        <span className="header-name">Bếp Mầm</span>
       </div>
 
       <nav className="header-center">

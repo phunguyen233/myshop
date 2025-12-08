@@ -16,7 +16,7 @@ export default function Header() {
   };
 
   return (
-    <header className="bg-background text-foreground shadow-sm border-b border-border p-4 flex justify-between items-center w-full transition-colors duration-300">
+    <header className="sticky top-0 z-40 bg-white text-foreground shadow-sm border-b border-border p-4 flex justify-between items-center w-full transition-colors duration-300">
       <div className="flex items-center space-x-3">
         <button
           onClick={() => setSidebarCollapsed(!sidebarCollapsed)}

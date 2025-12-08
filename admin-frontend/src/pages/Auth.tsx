@@ -59,11 +59,11 @@ const Auth: React.FC = () => {
 
         <div className="mt-4">
           <form onSubmit={handleLogin} className="space-y-3">
-            <input className="border border-input bg-background text-foreground p-2 w-full rounded-md focus:ring-2 focus:ring-ring focus:outline-none" placeholder="Tên đăng nhập" value={username} onChange={(e) => setUsername(e.target.value)} />
-            <input className="border border-input bg-background text-foreground p-2 w-full rounded-md focus:ring-2 focus:ring-ring focus:outline-none" type="password" placeholder="Mật khẩu" value={password} onChange={(e) => setPassword(e.target.value)} />
+            <input className="border border-input bg-background text-foreground p-2 w-full rounded-md focus:ring-2 focus:ring-black focus:outline-none" placeholder="Tên đăng nhập" value={username} onChange={(e) => setUsername(e.target.value)} />
+            <input className="border border-input bg-background text-foreground p-2 w-full rounded-md focus:ring-2 focus:ring-black focus:outline-none" type="password" placeholder="Mật khẩu" value={password} onChange={(e) => setPassword(e.target.value)} />
             <div>
               {loginError && <p className="text-destructive text-sm mb-2 text-center">{loginError}</p>}
-              <button type="submit" className="bg-primary text-primary-foreground w-full py-2 rounded-md hover:bg-primary/90 border border-transparent transition shadow-sm">Đăng nhập</button>
+              <button type="submit" className="w-full py-2 rounded-md bg-blue-600 hover:bg-blue-700 text-white border border-transparent transition shadow-sm">Đăng nhập</button>
             </div>
           </form>
           <p className="text-xs text-muted-foreground mt-3 text-center">Muốn có tài khoản admin? Thêm trực tiếp dữ liệu tài khoản vào cơ sở dữ liệu.</p>
