@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { useNavigate, useLocation } from "react-router-dom";
 
-const API = "http://localhost:5000/api";
+const API = "https://bepmam-backend.onrender.com/api";
 
 export default function OrderHistory() {
   const [orders, setOrders] = useState<any[]>([]);

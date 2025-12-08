@@ -3,7 +3,7 @@ import axios from "axios";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useEffect } from "react";
 
-const API = "http://localhost:5000/api";
+const API = "https://bepmam-backend.onrender.com/api";
 
 export default function Auth() {
   const [tab, setTab] = useState<"login" | "register">("login");
