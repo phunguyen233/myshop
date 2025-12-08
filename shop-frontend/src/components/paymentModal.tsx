@@ -19,12 +19,11 @@ export default function PaymentModal({ maDonHang = null, amount: initAmount = 0,
   const navigate = useNavigate();
 
   useEffect(() => {
-    // auto-create qr when amount/info props are available
-    if (amount && info) {
+    if ((amount !== undefined && amount !== null) && info && info.trim() !== "") {
       createQR();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [amount, info]);
+
 
   const createQR = async () => {
     if (!amount || !info) {
@@ -34,7 +33,7 @@ export default function PaymentModal({ maDonHang = null, amount: initAmount = 0,
 
     try {
       setLoading(true);
-      const res = await axios.get(`http://localhost:5000/api/payment/vietqr`, {
+      const res = await axios.get(`https://bepmam-backend.onrender.com/api/payment/vietqr`, {
         params: { amount, info },
       });
 
@@ -57,7 +56,7 @@ export default function PaymentModal({ maDonHang = null, amount: initAmount = 0,
 
     try {
       setLoading(true);
-      const res = await axios.post(`http://localhost:5000/api/payment/cancel`, { ma_don_hang: maDonHang });
+      const res = await axios.post(`https://bepmam-backend.onrender.com/api/payment/cancel`, { ma_don_hang: maDonHang });
       if (res.data && res.data.success) {
         alert("Đã hủy đơn hàng.");
         onCancelled && onCancelled(maDonHang);
