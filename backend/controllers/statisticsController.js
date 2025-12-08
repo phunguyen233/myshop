@@ -8,106 +8,113 @@ export const getStatistics = async (req, res) => {
       return res.status(400).json({ message: "Cần cung cấp startDate và endDate" });
     }
 
-    let groupByClause;
-    let dateFormatDisplay;
+    let groupExpr;       // biểu thức dùng trong GROUP BY
+    let selectExpr;      // biểu thức dùng trong SELECT
 
     if (groupBy === "day") {
-      // Convert purchase time to Vietnam timezone (+07:00) using DATE_ADD (avoids reliance on TZ tables)
-      groupByClause = "DATE(DATE_ADD(d.thoi_gian_mua, INTERVAL 7 HOUR))";
-      dateFormatDisplay = "DATE_FORMAT(DATE_ADD(d.thoi_gian_mua, INTERVAL 7 HOUR), '%Y-%m-%d')";
+      groupExpr = "DATE_FORMAT(DATE_ADD(d.thoi_gian_mua, INTERVAL 7 HOUR), '%Y-%m-%d')";
+      selectExpr = groupExpr;
     } else if (groupBy === "year") {
-      groupByClause = "YEAR(DATE_ADD(d.thoi_gian_mua, INTERVAL 7 HOUR))";
-      dateFormatDisplay = "YEAR(DATE_ADD(d.thoi_gian_mua, INTERVAL 7 HOUR))";
+      groupExpr = "YEAR(DATE_ADD(d.thoi_gian_mua, INTERVAL 7 HOUR))";
+      selectExpr = groupExpr;
     } else {
       // default month
-      groupByClause = "DATE_FORMAT(DATE_ADD(d.thoi_gian_mua, INTERVAL 7 HOUR), '%Y-%m')";
-      dateFormatDisplay = "DATE_FORMAT(DATE_ADD(d.thoi_gian_mua, INTERVAL 7 HOUR), '%Y-%m')";
+      groupExpr = "DATE_FORMAT(DATE_ADD(d.thoi_gian_mua, INTERVAL 7 HOUR), '%Y-%m')";
+      selectExpr = groupExpr;
     }
 
     const ordersQuery = `
       SELECT 
-        ${dateFormatDisplay} as date,
-        SUM(d.tong_tien) as revenue,
-        COUNT(d.ma_don_hang) as orders
+        ${selectExpr} AS date,
+        SUM(d.tong_tien) AS revenue,
+        COUNT(d.ma_don_hang) AS orders
       FROM donhang d
-      WHERE DATE(DATE_ADD(d.thoi_gian_mua, INTERVAL 7 HOUR)) >= ? AND DATE(DATE_ADD(d.thoi_gian_mua, INTERVAL 7 HOUR)) <= ? AND d.trang_thai = 'hoan_tat'
-      GROUP BY ${groupByClause}
-      ORDER BY ${dateFormatDisplay} ASC
+      WHERE DATE(DATE_ADD(d.thoi_gian_mua, INTERVAL 7 HOUR)) BETWEEN ? AND ?
+        AND d.trang_thai = 'hoan_tat'
+      GROUP BY ${groupExpr}
+      ORDER BY date ASC
     `;
+    console.log("Orders Query:", ordersQuery);
 
     const [orderRows] = await db.query(ordersQuery, [startDate, endDate]);
+    console.log("Order rows:", orderRows);
 
-    // Also fetch receipts grouped by the same period so we can report inventory cost per period
-    // Build date expressions for receipts by replacing d.thoi_gian_mua with n.thoi_gian_nhap in dateFormatDisplay and groupByClause
-    const receiptsDateFormat = dateFormatDisplay.replace(/DATE_ADD\(d\.thoi_gian_mua, INTERVAL 7 HOUR\)/g, "DATE_ADD(n.thoi_gian_nhap, INTERVAL 7 HOUR)").replace(/d\.thoi_gian_mua/g, 'n.thoi_gian_nhap');
-    const receiptsGroupBy = groupByClause.replace(/DATE_ADD\(d\.thoi_gian_mua, INTERVAL 7 HOUR\)/g, "DATE_ADD(n.thoi_gian_nhap, INTERVAL 7 HOUR)").replace(/d\.thoi_gian_mua/g, 'n.thoi_gian_nhap');
+    // Receipts query
+    const receiptsGroupExpr = groupExpr.replace(/d\.thoi_gian_mua/g, 'n.thoi_gian_nhap');
+    const receiptsSelectExpr = selectExpr.replace(/d\.thoi_gian_mua/g, 'n.thoi_gian_nhap');
 
     const receiptsQuery = `
       SELECT
-        ${receiptsDateFormat} as date,
-        COALESCE(SUM(n.tong_gia_tri),0) as inventory_cost
+        ${receiptsSelectExpr} AS date,
+        COALESCE(SUM(n.tong_gia_tri), 0) AS inventory_cost
       FROM nhapkho n
-      WHERE DATE(DATE_ADD(n.thoi_gian_nhap, INTERVAL 7 HOUR)) >= ? AND DATE(DATE_ADD(n.thoi_gian_nhap, INTERVAL 7 HOUR)) <= ?
-      GROUP BY ${receiptsGroupBy}
-      ORDER BY ${receiptsDateFormat} ASC
+      WHERE DATE(DATE_ADD(n.thoi_gian_nhap, INTERVAL 7 HOUR)) BETWEEN ? AND ?
+      GROUP BY ${receiptsGroupExpr}
+      ORDER BY date ASC
     `;
+    console.log("Receipts Query:", receiptsQuery);
 
     const [receiptRows] = await db.query(receiptsQuery, [startDate, endDate]);
+    console.log("Receipt rows:", receiptRows);
 
-    // Merge orderRows and receiptRows by date
+    // Merge data
     const statMap = new Map();
     for (const row of orderRows) {
-      const dateKey = String(row.date);
-      statMap.set(dateKey, {
-        date: dateKey,
+      statMap.set(row.date, {
+        date: row.date,
         revenue: Number(row.revenue) || 0,
         orders: Number(row.orders) || 0,
         inventoryCost: 0,
       });
     }
     for (const r of receiptRows) {
-      const dateKey = String(r.date);
-      const existing = statMap.get(dateKey) || { date: dateKey, revenue: 0, orders: 0, inventoryCost: 0 };
+      const existing = statMap.get(r.date) || { date: r.date, revenue: 0, orders: 0, inventoryCost: 0 };
       existing.inventoryCost = Number(r.inventory_cost) || 0;
-      statMap.set(dateKey, existing);
+      statMap.set(r.date, existing);
     }
 
-    const stats = Array.from(statMap.values()).map((s) => ({
+    const stats = Array.from(statMap.values()).map(s => ({
       ...s,
-      profit: Number((s.revenue || 0) - (s.inventoryCost || 0)),
+      profit: (s.revenue || 0) - (s.inventoryCost || 0)
     }));
 
-    const totalRevenue = stats.reduce((s, it) => s + (it.revenue || 0), 0);
-    const totalOrders = stats.reduce((s, it) => s + (it.orders || 0), 0);
+    const totalRevenue = stats.reduce((sum, s) => sum + (s.revenue || 0), 0);
+    const totalOrders = stats.reduce((sum, s) => sum + (s.orders || 0), 0);
 
-    // Compute total inventory cost (sum of tong_gia_tri from nhapkho) in the same date range
+    // Tổng tồn kho
     const [[invRow]] = await db.query(
-      `SELECT COALESCE(SUM(tong_gia_tri),0) as inventory_cost FROM nhapkho WHERE DATE(DATE_ADD(thoi_gian_nhap, INTERVAL 7 HOUR)) >= ? AND DATE(DATE_ADD(thoi_gian_nhap, INTERVAL 7 HOUR)) <= ?`,
+      `SELECT COALESCE(SUM(tong_gia_tri),0) AS inventory_cost 
+       FROM nhapkho 
+       WHERE DATE(DATE_ADD(thoi_gian_nhap, INTERVAL 7 HOUR)) BETWEEN ? AND ?`,
       [startDate, endDate]
     );
     const inventoryCost = Number(invRow?.inventory_cost || 0);
-
-    // Profit = totalRevenue (completed orders revenue) - inventoryCost
     const profit = totalRevenue - inventoryCost;
 
-    // If caller requests full data, include the raw completed orders and receipts lists
     if (String(full).toLowerCase() === 'true') {
-      // Fetch completed orders in range
-      const [orders] = await db.query(
-        `SELECT d.ma_don_hang, d.ma_khach_hang, d.ten_nguoi_nhan, d.so_dien_thoai_nhan, d.dia_chi_nhan, d.tong_tien, d.trang_thai, DATE_FORMAT(DATE_ADD(d.thoi_gian_mua, INTERVAL 7 HOUR), '%Y-%m-%d %H:%i:%s') as thoi_gian_mua FROM donhang d WHERE DATE(DATE_ADD(d.thoi_gian_mua, INTERVAL 7 HOUR)) >= ? AND DATE(DATE_ADD(d.thoi_gian_mua, INTERVAL 7 HOUR)) <= ? AND d.trang_thai = 'hoan_tat' ORDER BY d.thoi_gian_mua DESC`,
+      const [ordersList] = await db.query(
+        `SELECT d.ma_don_hang, d.ma_khach_hang, d.ten_nguoi_nhan, d.so_dien_thoai_nhan, d.dia_chi_nhan, d.tong_tien, d.trang_thai,
+        DATE_FORMAT(DATE_ADD(d.thoi_gian_mua, INTERVAL 7 HOUR), '%Y-%m-%d %H:%i:%s') AS thoi_gian_mua
+        FROM donhang d
+        WHERE DATE(DATE_ADD(d.thoi_gian_mua, INTERVAL 7 HOUR)) BETWEEN ? AND ? 
+        AND d.trang_thai = 'hoan_tat'
+        ORDER BY d.thoi_gian_mua DESC`,
         [startDate, endDate]
       );
 
-      // Fetch receipts (nhapkho) in range
-      const [receipts] = await db.query(
-        `SELECT n.ma_nhap as ma_nhap, DATE_FORMAT(DATE_ADD(n.thoi_gian_nhap, INTERVAL 7 HOUR), '%Y-%m-%d %H:%i:%s') as thoi_gian_nhap, n.tong_gia_tri FROM nhapkho n WHERE DATE(DATE_ADD(n.thoi_gian_nhap, INTERVAL 7 HOUR)) >= ? AND DATE(DATE_ADD(n.thoi_gian_nhap, INTERVAL 7 HOUR)) <= ? ORDER BY n.thoi_gian_nhap DESC`,
+      const [receiptsList] = await db.query(
+        `SELECT n.ma_nhap, DATE_FORMAT(DATE_ADD(n.thoi_gian_nhap, INTERVAL 7 HOUR), '%Y-%m-%d %H:%i:%s') AS thoi_gian_nhap, n.tong_gia_tri
+        FROM nhapkho n
+        WHERE DATE(DATE_ADD(n.thoi_gian_nhap, INTERVAL 7 HOUR)) BETWEEN ? AND ?
+        ORDER BY n.thoi_gian_nhap DESC`,
         [startDate, endDate]
       );
 
-      return res.json({ stats, totalRevenue, totalOrders, inventoryCost, profit, ordersList: orders, receiptsList: receipts });
+      return res.json({ stats, totalRevenue, totalOrders, inventoryCost, profit, ordersList, receiptsList });
     }
 
     res.json({ stats, totalRevenue, totalOrders, inventoryCost, profit });
+
   } catch (err) {
     console.error("Error in getStatistics:", err);
     res.status(500).json({ message: "Lỗi khi lấy thống kê", error: err.message });
