@@ -25,96 +25,72 @@ export default function StatisticsPage() {
   const [ordersList, setOrdersList] = useState<any[]>([]);
   const [receiptsList, setReceiptsList] = useState<any[]>([]);
 
-  // Helper để format date theo local time YYYY-MM-DD
-  const formatDateLocal = (date: Date) => {
-    const offset = date.getTimezoneOffset();
-    const localDate = new Date(date.getTime() - offset * 60 * 1000);
-    return localDate.toISOString().split("T")[0];
-  };
-
-  // Hàm tính ngày bắt đầu mặc định theo quy ước
-  const getDefaultDates = (gb: "day" | "month" | "year") => {
-    const today = new Date();
-    let defaultStart: Date;
-
-    if (gb === "day") {
-      // 30 ngày gần nhất (tính cả hôm nay là 30 ngày) -> lùi lại 29 ngày
-      defaultStart = new Date(today);
-      defaultStart.setDate(today.getDate() - 29);
-    } else if (gb === "month") {
-      // 12 tháng gần nhất -> lùi lại 11 tháng
-      defaultStart = new Date(today);
-      defaultStart.setMonth(today.getMonth() - 11);
-      defaultStart.setDate(1);
-    } else if (gb === "year") {
-      // 10 năm gần nhất -> lùi lại 9 năm
-      defaultStart = new Date(today);
-      defaultStart.setFullYear(today.getFullYear() - 9);
-      defaultStart.setMonth(0, 1);
-    } else {
-      defaultStart = today;
-    }
-
-    return {
-      sd: formatDateLocal(defaultStart),
-      ed: formatDateLocal(today),
-    };
-  };
-
   const fetchStatistics = async (sDate?: string, eDate?: string, grp?: "day" | "month" | "year") => {
-    const gb = grp || groupBy;
     let sd = sDate || startDate;
     let ed = eDate || endDate;
+    const gb = grp || groupBy;
 
-    // Nếu chưa có ngày, lấy mặc định
+    // If dates are missing, choose sensible defaults:
+    // - when grouping by day, default to today (so totals show for today)
+    // - otherwise default to last 30 days
     if (!sd || !ed) {
-      const defaultDates = getDefaultDates(gb);
-      sd = sd || defaultDates.sd;
-      ed = ed || defaultDates.ed;
+      const today = new Date();
+      if (gb === 'day') {
+        const iso = today.toISOString().split('T')[0];
+        sd = sd || iso;
+        ed = ed || iso;
+      } else {
+        const defaultStart = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
+        sd = sd || defaultStart.toISOString().split("T")[0];
+        ed = ed || today.toISOString().split("T")[0];
+      }
+      // reflect defaults in the UI
       setStartDate(sd);
       setEndDate(ed);
     }
-
     try {
       setLoading(true);
+
       const res = await axiosClient.get(`/statistics`, {
         params: { startDate: sd, endDate: ed, groupBy: gb, full: true },
       });
-      console.log("Statistics response:", res.data);
+
       const data = res.data || {};
+
       setStats(data.stats || []);
       setInventoryCost(data.inventoryCost || 0);
       setOrdersList(data.ordersList || []);
       setReceiptsList(data.receiptsList || []);
 
-      // Tính tổng từ đơn hoàn tất
+      // Recompute totals from orders: totalRevenue should be sum of tong_tien
+      // for orders with trang_thai === 'hoan_tat' within the selected date range.
       try {
         const allOrders = await orderAPI.getAll();
         const completed = (allOrders || []).filter((o: any) => {
           const status = o.trang_thai || o.trangThai || o.status;
-          if (status !== "hoan_tat") return false;
+          if (status !== 'hoan_tat') return false;
           const time = o.thoi_gian_mua || o.created_at || o.createdAt || o.time;
           if (!time) return false;
           const d = new Date(time);
           if (isNaN(d.getTime())) return false;
-          // Sử dụng formatDateLocal để so sánh ngày theo local time
-          const ds = formatDateLocal(d);
+          const ds = d.toISOString().split('T')[0];
           return ds >= sd && ds <= ed;
         });
 
-        const revenueSum = completed.reduce(
-          (s: number, o: any) => s + (Number(o.tong_tien || o.tongTien || o.total || 0) || 0),
-          0
-        );
+        const revenueSum = completed.reduce((s: number, o: any) => s + (Number(o.tong_tien || o.tongTien || o.total || 0) || 0), 0);
         setTotalRevenue(revenueSum);
         setTotalOrders(completed.length || 0);
-        setProfit(revenueSum - Number(data.inventoryCost || 0));
+        // profit = revenue from completed orders - inventoryCost
+        const invCost = Number(data.inventoryCost || 0);
+        setProfit(revenueSum - invCost);
       } catch (e) {
-        console.warn("Không thể lấy danh sách đơn để tính tổng doanh thu, dùng dữ liệu server nếu có", e);
+        // If orders fetch fails, fall back to server-provided totals if any
+        console.warn('Không thể lấy danh sách đơn để tính tổng doanh thu, dùng dữ liệu server nếu có', e);
         setTotalRevenue(data.totalRevenue || 0);
         setTotalOrders(data.totalOrders || 0);
         setProfit(data.profit || 0);
       }
+
     } catch (err) {
       console.error(err);
       alert("Lỗi lấy thống kê!");
@@ -122,30 +98,16 @@ export default function StatisticsPage() {
       setLoading(false);
     }
   };
-
-  // Khi đổi groupBy, tự động cập nhật khoảng thời gian mặc định và tải dữ liệu
-  useEffect(() => {
-    const defaultDates = getDefaultDates(groupBy);
-    setStartDate(defaultDates.sd);
-    setEndDate(defaultDates.ed);
-    fetchStatistics(defaultDates.sd, defaultDates.ed, groupBy);
-  }, [groupBy]);
-
-  // Quick Filter vẫn hoạt động
+  
   const handleQuickFilter = (days: number) => {
     const today = new Date();
-    const pastDate = new Date(today);
-    pastDate.setDate(today.getDate() - (days - 1)); // Bao gồm hôm nay
-
-    const sDate = formatDateLocal(pastDate);
-    const eDate = formatDateLocal(today);
-
-    setStartDate(sDate);
-    setEndDate(eDate);
-
-    // Gọi API ngay khi chọn filter
-    fetchStatistics(sDate, eDate);
+    const pastDate = new Date(today.getTime() - days * 24 * 60 * 60 * 1000);
+    setStartDate(pastDate.toISOString().split("T")[0]);
+    setEndDate(today.toISOString().split("T")[0]);
   };
+
+  // NOTE: Do not auto-fetch on group change. Instead, fetchStatistics will
+  // default to last 30 days when groupBy === 'day' and dates are not provided.
 
   return (
     <div className="p-6 bg-gray-50 min-h-screen">
@@ -155,18 +117,31 @@ export default function StatisticsPage() {
       <div className="bg-white rounded-lg shadow-md p-4 mb-6">
         <h2 className="text-lg font-semibold mb-3">Lọc nhanh</h2>
         <div className="flex gap-3 flex-wrap">
-          <button onClick={() => handleQuickFilter(7)} className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
+          <button
+            onClick={() => handleQuickFilter(7)}
+            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+          >
             7 ngày qua
           </button>
-          <button onClick={() => handleQuickFilter(30)} className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
+          <button
+            onClick={() => handleQuickFilter(30)}
+            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+          >
             30 ngày qua
           </button>
-          <button onClick={() => handleQuickFilter(90)} className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
+          <button
+            onClick={() => handleQuickFilter(90)}
+            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+          >
             90 ngày qua
           </button>
-          <button onClick={() => handleQuickFilter(365)} className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
+          <button
+            onClick={() => handleQuickFilter(365)}
+            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+          >
             1 năm qua
           </button>
+          {/* removed quick 'Tải theo ngày' button per request */}
         </div>
       </div>
 
@@ -209,9 +184,11 @@ export default function StatisticsPage() {
             disabled={loading}
             className="px-6 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:bg-gray-400"
           >
-            {loading ? "Đang tải..." : "Tải dữ liệu"}
+            Tải dữ liệu 
           </button>
         </div>
+
+        {/* removed total orders box from date-range picker */}
       </div>
 
       {/* Summary Cards */}
@@ -230,7 +207,7 @@ export default function StatisticsPage() {
         </div>
         <div className="bg-white rounded-lg shadow-md p-6">
           <h3 className="text-gray-600 text-sm font-medium">Tiền lãi</h3>
-          <p className={`text-3xl font-bold ${profit >= 0 ? "text-green-600" : "text-red-600"}`}>{Number(profit).toLocaleString()}đ</p>
+          <p className={`text-3xl font-bold ${profit >= 0 ? 'text-green-600' : 'text-red-600'}`}>{Number(profit).toLocaleString()}đ</p>
         </div>
       </div>
 
@@ -242,11 +219,21 @@ export default function StatisticsPage() {
               <th className="px-6 py-3 text-left font-semibold text-gray-700">
                 {groupBy === "day" ? "Ngày" : groupBy === "month" ? "Tháng" : "Năm"}
               </th>
-              <th className="px-6 py-3 text-right font-semibold text-gray-700">Doanh thu</th>
-              <th className="px-6 py-3 text-right font-semibold text-gray-700">Số đơn hàng</th>
-              <th className="px-6 py-3 text-right font-semibold text-gray-700">Tiền nhập kho</th>
-              <th className="px-6 py-3 text-right font-semibold text-gray-700">Tiền lãi</th>
-              <th className="px-6 py-3 text-right font-semibold text-gray-700">Doanh thu / đơn</th>
+              <th className="px-6 py-3 text-right font-semibold text-gray-700">
+                Doanh thu
+              </th>
+              <th className="px-6 py-3 text-right font-semibold text-gray-700">
+                Số đơn hàng
+              </th>
+              <th className="px-6 py-3 text-right font-semibold text-gray-700">
+                Tiền nhập kho
+              </th>
+              <th className="px-6 py-3 text-right font-semibold text-gray-700">
+                Tiền lãi
+              </th>
+              <th className="px-6 py-3 text-right font-semibold text-gray-700">
+                Doanh thu / đơn
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -260,14 +247,19 @@ export default function StatisticsPage() {
               stats.map((stat, idx) => (
                 <tr key={idx} className="border-b hover:bg-gray-50">
                   <td className="px-6 py-3 text-gray-700">{stat.date}</td>
-                  <td className="px-6 py-3 text-right font-semibold text-green-600">{Number(stat.revenue).toLocaleString()}đ</td>
+                  <td className="px-6 py-3 text-right font-semibold text-green-600">
+                    {Number(stat.revenue).toLocaleString()}đ
+                  </td>
                   <td className="px-6 py-3 text-right text-gray-700">{stat.orders}</td>
                   <td className="px-6 py-3 text-right text-yellow-600">{Number(stat.inventoryCost || 0).toLocaleString()}đ</td>
-                  <td className={`px-6 py-3 text-right ${((stat.profit || 0) >= 0 ? "text-green-600" : "text-red-600")}`}>{Number(stat.profit || 0).toLocaleString()}đ</td>
+                  <td className={`px-6 py-3 text-right ${((stat.profit || 0) >= 0) ? 'text-green-600' : 'text-red-600'}`}>{Number(stat.profit || 0).toLocaleString()}đ</td>
                   <td className="px-6 py-3 text-right text-gray-600">
                     {stat.orders > 0
-                      ? Number((stat.revenue || 0) / stat.orders).toLocaleString("vi-VN", { maximumFractionDigits: 0 })
-                      : 0}đ
+                      ? Number((stat.revenue || 0) / stat.orders).toLocaleString("vi-VN", {
+                          maximumFractionDigits: 0,
+                        })
+                      : 0}
+                    đ
                   </td>
                 </tr>
               ))

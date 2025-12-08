@@ -5,4 +5,5 @@ export interface Product {
   so_luong_ton: number;
   hinh_anh?: string;
   trang_thai?: string;
+  mo_ta?: string;
 }

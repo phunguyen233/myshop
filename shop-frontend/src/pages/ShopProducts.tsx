@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { Product } from "../types/Product";
+import CartProduct from "../components/cartProduct";
 
 const API_URL = "http://localhost:5000/api/products";
 
@@ -9,6 +10,7 @@ export default function ShopProducts() {
   const [query, setQuery] = useState<string>("");
   const [hoveredId, setHoveredId] = useState<number | null>(null);
   const [pressedButton, setPressedButton] = useState<string | null>(null);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
 
   useEffect(() => {
     axios
@@ -20,6 +22,7 @@ export default function ShopProducts() {
           gia_ban: row.gia_ban ?? 0,
           so_luong_ton: row.so_luong_ton ?? 0,
           hinh_anh: row.hinh_anh ?? "",
+          mo_ta: row.mo_ta ?? "",
           hien_thi: (row.trang_thai ?? row.hien_thi) === "hien" || row.hien_thi === true,
         }));
 
@@ -69,6 +72,7 @@ export default function ShopProducts() {
   );
 
   return (
+    <>
     <div className="p-8 bg-gray-50 min-h-screen">
       <div className="mb-8 flex items-center justify-center" style={{ marginTop: 24 }}>
         <input
@@ -82,9 +86,9 @@ export default function ShopProducts() {
         />
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 265px)", gap: 16, justifyContent: "center" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 350px)", gap: 16, justifyContent: "center" }}>
         {filteredProducts.map((p) => (
-          <div key={p.id} style={{ padding: 4, width: 265 }}>
+          <div key={p.id} style={{ padding: 4, width: 350 }}>
             <div
               onMouseEnter={() => setHoveredId(p.id)}
               onMouseLeave={() => setHoveredId(null)}
@@ -128,34 +132,64 @@ export default function ShopProducts() {
                 <p className="text-green-600 font-bold mb-3">{Number(p.gia_ban).toLocaleString()}đ</p>
               </div>
 
-              {/* Buttons row: Add to cart only */}
-              <div className="px-2 mt-3">
-                { (!p.hien_thi || (p.so_luong_ton || 0) <= 0) ? (
-                  <button className="w-full bg-gray-400 text-white py-3 rounded-2xl">Hết hàng</button>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => handleAddToCart(p)}
-                    onMouseDown={() => setPressedButton(`${p.id}-add`)}
-                    onMouseUp={() => setPressedButton(null)}
-                    onMouseLeave={() => setPressedButton(null)}
-                    onTouchStart={() => setPressedButton(`${p.id}-add`)}
-                    onTouchEnd={() => setPressedButton(null)}
-                    className={
-                      `w-full text-white py-3 text-base rounded-2xl transition transform duration-100 focus:outline-none focus:ring-2 focus:ring-green-300 shadow-sm ` +
-                      (pressedButton === `${p.id}-add`
-                        ? "bg-green-900 scale-95"
-                        : "bg-green-600 hover:bg-green-700 active:bg-green-800")
-                    }
-                  >
-                    Thêm giỏ hàng
+              {/* Buttons row: Detail + Add to cart */}
+              <div className="px-2 mt-3 flex gap-3 w-full">
+                {(!p.hien_thi || (p.so_luong_ton || 0) <= 0) ? (
+                  <button className="flex-1 bg-gray-300 text-white py-3.5 rounded-2xl cursor-not-allowed select-none">
+                    Hết hàng
                   </button>
+                ) : (
+                  <>
+                    {/* Nút THÊM GIỎ HÀNG */}
+                    <button
+                      type="button"
+                      onClick={() => handleAddToCart(p)}
+                      onMouseDown={() => setPressedButton(`${p.id}-add`)}
+                      onMouseUp={() => setPressedButton(null)}
+                      onMouseLeave={() => setPressedButton(null)}
+                      onTouchStart={() => setPressedButton(`${p.id}-add`)}
+                      onTouchEnd={() => setPressedButton(null)}
+                      className={`
+                        flex-1 py-3.5 text-[15px] font-medium text-white rounded-2xl
+                        transition-all duration-150 shadow-sm
+                        ${pressedButton === `${p.id}-add`
+                          ? "bg-green-800 scale-95"
+                          : "bg-green-600 hover:bg-green-700 active:bg-green-800"}
+                      `}
+                    >
+                      Thêm giỏ hàng
+                    </button>
+
+                    {/* Nút CHI TIẾT */}
+                    <button
+                      type="button"
+                      onClick={() => setSelectedProduct(p)}
+                      className="
+                        flex-1 py-3.5 text-[15px] font-medium rounded-2xl 
+                        bg-white border border-gray-300 text-gray-700 
+                        hover:bg-gray-50 active:bg-gray-200 
+                        transition-all duration-150
+                      "
+                    >
+                      Chi tiết
+                    </button>
+                  </>
                 )}
               </div>
+
             </div>
           </div>
         ))}
       </div>
     </div>
+      {/* Detail modal */}
+      {selectedProduct && (
+        <CartProduct
+          product={selectedProduct as Product}
+          onClose={() => setSelectedProduct(null)}
+          onAddToCart={(prod) => handleAddToCart(prod)}
+        />
+      )}
+    </>
   );
 }

@@ -14,6 +14,7 @@ export default function Products() {
     gia_ban: 0,
     so_luong_ton: 0,
     hinh_anh: "",
+    mo_ta: "",
   });
   const [productFieldErrors, setProductFieldErrors] = useState<{ ten_san_pham?: string; gia_ban?: string; }>({});
 
@@ -116,6 +117,11 @@ export default function Products() {
     });
   };
 
+  const handleTextAreaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setFormData({ ...formData, [name]: value });
+  };
+
   // Lọc sản phẩm dựa trên tìm kiếm
   const filteredProducts = products.filter((p) =>
     p.ten_san_pham.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -191,6 +197,17 @@ export default function Products() {
                   value={formData.hinh_anh}
                   onChange={handleInputChange}
                   className="w-full border border-input bg-background rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-black"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold mb-1">Mô tả</label>
+                <textarea
+                  name="mo_ta"
+                  value={formData.mo_ta}
+                  onChange={handleTextAreaChange}
+                  rows={4}
+                  className="w-full border border-input bg-background rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-black"
+                  placeholder="Mô tả sản phẩm (tùy chọn)"
                 />
               </div>
               <div className="flex gap-3 pt-4">

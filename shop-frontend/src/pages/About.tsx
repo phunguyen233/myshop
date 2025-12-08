@@ -34,8 +34,8 @@ export default function AboutPage() {
       {/* NUMBERS */}
       <section className="w-full max-w-6xl grid grid-cols-2 md:grid-cols-4 gap-6 py-10 px-6">
         {[
-          { number: "10K+", label: "Lượt khách" },
-          { number: "30+", label: "Sản phẩm" },
+          { number: "1K+", label: "Lượt khách" },
+          { number: "10+", label: "Sản phẩm" },
           { number: "2024", label: "Thành lập" },
           { number: "5★", label: "Đánh giá" },
         ].map((item, i) => (
