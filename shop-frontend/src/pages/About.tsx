@@ -8,7 +8,7 @@ export default function AboutPage() {
       <section className="w-full max-w-6xl grid grid-cols-1 md:grid-cols-2 gap-10 py-16 px-6">
         <div className="rounded-3xl overflow-hidden shadow-lg">
           <img
-            src="/assets/bepmam-hero.jpg"
+            src="/assets/about-hero.jpg"
             alt="Bếp Mầm"
             className="w-full h-full object-cover"
           />
@@ -36,8 +36,8 @@ export default function AboutPage() {
         {[
           { number: "10K+", label: "Lượt khách" },
           { number: "30+", label: "Sản phẩm" },
-          { number: "2021", label: "Thành lập" },
-          { number: "4.9★", label: "Đánh giá" },
+          { number: "2024", label: "Thành lập" },
+          { number: "5★", label: "Đánh giá" },
         ].map((item, i) => (
           <div
             key={i}
@@ -78,7 +78,7 @@ export default function AboutPage() {
               id: 1,
               title: "SỮA HẠT",
               desc: "Sữa hạt nguyên chất tốt cho sức khỏe, phù hợp mọi độ tuổi.",
-              img: "/assets/suahatt.png",
+              img: "/assets/suahat.png",
             },
             {
               id: 2,
@@ -95,16 +95,21 @@ export default function AboutPage() {
           ].map((item) => (
             <div
               key={item.id}
-              className="bg-gradient-to-r from-green-600 to-green-400 text-white rounded-3xl p-6 flex flex-col shadow-xl relative overflow-hidden"
+              className="bg-white rounded-3xl p-4 shadow-xl overflow-hidden flex flex-col md:flex-row items-start gap-4"
             >
-              <div className="text-3xl font-bold mb-4">0{item.id}</div>
-              <h3 className="text-2xl font-semibold mb-3">{item.title}</h3>
-              <p className="mb-4">{item.desc}</p>
-              <img
-                src={item.img}
-                alt={item.title}
-                className="w-32 absolute bottom-4 right-4 drop-shadow-lg"
-              />
+              {/* Image */}
+              <div className="w-full md:w-1/2 flex-shrink-0">
+                <div className="overflow-hidden rounded-2xl">
+                  <img src={item.img} alt={item.title} className="w-full h-48 md:h-56 object-cover" />
+                </div>
+              </div>
+
+              {/* Content */}
+              <div className="flex-1">
+                <div className="text-sm text-green-600 font-bold mb-2">0{item.id}</div>
+                <h3 className="text-xl font-semibold mb-2 text-gray-900">{item.title}</h3>
+                <p className="text-gray-700">{item.desc}</p>
+              </div>
             </div>
           ))}
         </div>
