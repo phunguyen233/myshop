@@ -3,7 +3,7 @@ import axios from "axios";
 import { Product } from "../types/Product";
 import CartProduct from "../components/cartProduct";
 
-const API_URL = "https://bepmam-backend.onrender.com/products";
+const API_URL = "https://bepmam-backend.onrender.com/api/products";
 
 export default function ShopProducts() {
   const [products, setProducts] = useState<Product[]>([]);
