@@ -132,49 +132,51 @@ export default function ShopProducts() {
                 <p className="text-green-600 font-bold mb-3">{Number(p.gia_ban).toLocaleString()}đ</p>
               </div>
 
-              {/* Buttons row: Detail + Add to cart */}
+              {/* Buttons row: left is Add-to-cart or 'Hết hàng' when out of stock; right is always 'Chi tiết' */}
               <div className="px-2 mt-3 flex gap-3 w-full">
+                {/* Left button: either active add-to-cart or disabled "Hết hàng" */}
                 {(!p.hien_thi || (p.so_luong_ton || 0) <= 0) ? (
-                  <button className="flex-1 bg-gray-300 text-white py-3.5 rounded-2xl cursor-not-allowed select-none">
+                  <button
+                    type="button"
+                    disabled
+                    className="flex-1 bg-gray-300 text-white py-3.5 rounded-2xl cursor-not-allowed select-none"
+                  >
                     Hết hàng
                   </button>
                 ) : (
-                  <>
-                    {/* Nút THÊM GIỎ HÀNG */}
-                    <button
-                      type="button"
-                      onClick={() => handleAddToCart(p)}
-                      onMouseDown={() => setPressedButton(`${p.id}-add`)}
-                      onMouseUp={() => setPressedButton(null)}
-                      onMouseLeave={() => setPressedButton(null)}
-                      onTouchStart={() => setPressedButton(`${p.id}-add`)}
-                      onTouchEnd={() => setPressedButton(null)}
-                      className={`
-                        flex-1 py-3.5 text-[15px] font-medium text-white rounded-2xl
-                        transition-all duration-150 shadow-sm
-                        ${pressedButton === `${p.id}-add`
-                          ? "bg-green-800 scale-95"
-                          : "bg-green-600 hover:bg-green-700 active:bg-green-800"}
-                      `}
-                    >
-                      Thêm giỏ hàng
-                    </button>
-
-                    {/* Nút CHI TIẾT */}
-                    <button
-                      type="button"
-                      onClick={() => setSelectedProduct(p)}
-                      className="
-                        flex-1 py-3.5 text-[15px] font-medium rounded-2xl 
-                        bg-white border border-gray-300 text-gray-700 
-                        hover:bg-gray-50 active:bg-gray-200 
-                        transition-all duration-150
-                      "
-                    >
-                      Chi tiết
-                    </button>
-                  </>
+                  <button
+                    type="button"
+                    onClick={() => handleAddToCart(p)}
+                    onMouseDown={() => setPressedButton(`${p.id}-add`)}
+                    onMouseUp={() => setPressedButton(null)}
+                    onMouseLeave={() => setPressedButton(null)}
+                    onTouchStart={() => setPressedButton(`${p.id}-add`)}
+                    onTouchEnd={() => setPressedButton(null)}
+                    className={`
+                      flex-1 py-3.5 text-[15px] font-medium text-white rounded-2xl
+                      transition-all duration-150 shadow-sm
+                      ${pressedButton === `${p.id}-add`
+                        ? "bg-green-800 scale-95"
+                        : "bg-green-600 hover:bg-green-700 active:bg-green-800"}
+                    `}
+                  >
+                    Thêm giỏ hàng
+                  </button>
                 )}
+
+                {/* Right button: always show details */}
+                <button
+                  type="button"
+                  onClick={() => setSelectedProduct(p)}
+                  className="
+                    flex-1 py-3.5 text-[15px] font-medium rounded-2xl 
+                    bg-white border border-gray-300 text-gray-700 
+                    hover:bg-gray-50 active:bg-gray-200 
+                    transition-all duration-150
+                  "
+                >
+                  Chi tiết
+                </button>
               </div>
 
             </div>

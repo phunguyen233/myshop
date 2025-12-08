@@ -130,6 +130,23 @@
   border-color: var(--border) !important;
 }
 
+/* Additional gray utility mappings to improve dark mode coverage */
+.dark .bg-gray-300,
+.dark .bg-gray-400,
+.dark .bg-gray-500 {
+  background-color: var(--input) !important;
+  color: var(--card-foreground) !important;
+}
+.dark .text-gray-600,
+.dark .text-gray-700 {
+  color: var(--muted-foreground) !important;
+}
+.dark .hover\:bg-gray-300:hover,
+.dark .hover\:bg-gray-400:hover,
+.dark .hover\:bg-gray-50:hover {
+  background-color: rgba(255,255,255,0.03) !important;
+}
+
 /* Sidebar-specific and common gray utilities mapping for dark theme */
 .dark .bg-gray-100,
 .dark .bg-gray-50,

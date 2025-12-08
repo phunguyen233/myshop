@@ -128,14 +128,14 @@ const Dashboard: React.FC = () => {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <div className="bg-white p-4 rounded-xl shadow hover:shadow-lg transition border border-border">
             <h2 className="font-semibold text-gray-800">Tổng sản phẩm</h2>
-            <p className="text-3xl font-bold text-black">{totalProducts}</p>
+            <p className="text-3xl font-bold text-blue-600">{totalProducts}</p>
             <p className="text-sm text-gray-500">Sản phẩm đang kinh doanh</p>
           </div>
 
           {/* Đơn hàng */}
           <div className="bg-white p-6 rounded-xl shadow-sm border border-border hover:shadow-md transition-all">
             <h2 className="font-semibold text-gray-800 mb-2"> Đơn hàng</h2>
-            <p className="text-3xl font-bold text-black">{ordersCount}</p>
+            <p className="text-3xl font-bold text-blue-600">{ordersCount}</p>
             <p className="text-sm text-gray-500 mt-1">Tổng số đơn hàng</p>
           </div>
 
@@ -188,7 +188,7 @@ const Dashboard: React.FC = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="mt-12 grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Biểu đồ Giá bán */}
         <div className="bg-card rounded-xl shadow-sm border border-border overflow-hidden p-6">
           <div className="mb-6">
@@ -208,7 +208,7 @@ const Dashboard: React.FC = () => {
                     strokeDasharray="3 3"
                     stroke="var(--border)"
                   />
-                  <XAxis dataKey="name" stroke="var(--foreground)" />
+                  <XAxis dataKey="name" stroke="var(--foreground)" tick={false} axisLine={false} tickLine={false} />
                   <YAxis stroke="var(--foreground)" />
                   <Tooltip
                     cursor={{ fill: "rgba(200, 200, 200, 0.2)" }}
@@ -254,7 +254,7 @@ const Dashboard: React.FC = () => {
                     strokeDasharray="3 3"
                     stroke="var(--border)"
                   />
-                  <XAxis dataKey="name" stroke="var(--foreground)" />
+                  <XAxis dataKey="name" stroke="var(--foreground)" tick={false} axisLine={false} tickLine={false} />
                   <YAxis stroke="var(--foreground)" />
                   <Tooltip
                     cursor={{ fill: "rgba(200, 200, 200, 0.2)" }}
