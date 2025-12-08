@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { useTheme } from "../contexts/ThemeContext";
 import axiosClient from "../api/axiosClient";
 import { orderAPI } from "../api/orderAPI";
 
@@ -11,6 +12,7 @@ interface StatData {
 }
 
 export default function StatisticsPage() {
+  const { theme } = useTheme();
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [groupBy, setGroupBy] = useState<"day" | "month" | "year">("month");
@@ -150,29 +152,32 @@ export default function StatisticsPage() {
         <h2 className="text-lg font-semibold mb-3">Chọn khoảng thời gian</h2>
         <div className="flex gap-4 items-end flex-wrap">
           <div>
-            <label className="block text-sm font-medium mb-1">Từ ngày</label>
+            <label className={"block text-sm font-medium mb-1 " + (theme === 'light' ? 'text-black' : 'text-card-foreground')}>Từ ngày</label>
             <input
               type="date"
               value={startDate}
               onChange={(e) => setStartDate(e.target.value)}
               className="px-4 py-2 border border-gray-300 rounded"
+              style={{ color: '#000' }}
             />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">Đến ngày</label>
+            <label className={"block text-sm font-medium mb-1 " + (theme === 'light' ? 'text-black' : 'text-card-foreground')}>Đến ngày</label>
             <input
               type="date"
               value={endDate}
               onChange={(e) => setEndDate(e.target.value)}
               className="px-4 py-2 border border-gray-300 rounded"
+              style={{ color: '#000' }}
             />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">Nhóm theo</label>
+            <label className={"block text-sm font-medium mb-1 " + (theme === 'light' ? 'text-black' : 'text-card-foreground')}>Nhóm theo</label>
             <select
               value={groupBy}
               onChange={(e) => setGroupBy(e.target.value as "day" | "month" | "year")}
               className="px-4 py-2 border border-gray-300 rounded"
+              style={{ color: '#000' }}
             >
               <option value="day">Theo ngày</option>
               <option value="month">Theo tháng</option>
