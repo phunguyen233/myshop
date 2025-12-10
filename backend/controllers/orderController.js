@@ -14,7 +14,7 @@ export const getOrders = async (req, res) => {
 
 export const addOrder = async (req, res) => {
   try {
-    // Expect payload: { ma_khach_hang?, ma_tai_khoan?, ho_ten?, nam_sinh?, dia_chi?, so_dien_thoai?, ten_nguoi_nhan, so_dien_thoai_nhan, dia_chi_nhan, tong_tien, chi_tiet }
+    // Dữ liệu mong đợi: { ma_khach_hang?, ma_tai_khoan?, ho_ten?, nam_sinh?, dia_chi?, so_dien_thoai?, ten_nguoi_nhan, so_dien_thoai_nhan, dia_chi_nhan, tong_tien, chi_tiet }
     const {
       ma_khach_hang,
       ma_tai_khoan,
@@ -29,17 +29,17 @@ export const addOrder = async (req, res) => {
 
     let final_ma_khach_hang = ma_khach_hang || null;
 
-    // If ma_tai_khoan provided, prefer using existing khachhang row for that account
+    // Nếu có `ma_tai_khoan`, ưu tiên sử dụng bản ghi `khachhang` hiện có cho tài khoản đó
     if (!final_ma_khach_hang && ma_tai_khoan) {
       const [rows] = await db.query("SELECT ma_khach_hang, so_dien_thoai FROM khachhang WHERE ma_tai_khoan = ?", [ma_tai_khoan]);
       if (rows.length > 0) {
         final_ma_khach_hang = rows[0].ma_khach_hang;
-        // If phone missing in existing khachhang and provided now, try to update it
+        // Nếu `so_dien_thoai` trong bản ghi khachhang hiện tại trống và người dùng cung cấp, cập nhật
         if (!rows[0].so_dien_thoai && so_dien_thoai) {
           await db.query("UPDATE khachhang SET so_dien_thoai = ? WHERE ma_khach_hang = ?", [so_dien_thoai, final_ma_khach_hang]);
         }
       } else {
-        // create new khachhang linked to this account
+        // Tạo bản ghi `khachhang` mới liên kết với tài khoản này
         const [ins] = await db.query(
           "INSERT INTO khachhang (ho_ten, so_dien_thoai, ma_tai_khoan) VALUES (?, ?, ?)",
           [ho_ten || null, so_dien_thoai || null, ma_tai_khoan]
@@ -48,7 +48,7 @@ export const addOrder = async (req, res) => {
       }
     }
 
-    // If still no ma_khach_hang (guest checkout), create a khachhang row without account
+    // Nếu vẫn chưa có `ma_khach_hang` (khách vãng lai), tạo bản ghi `khachhang` không liên kết tài khoản
     if (!final_ma_khach_hang) {
       const [ins] = await db.query(
         "INSERT INTO khachhang (ho_ten, so_dien_thoai, ma_tai_khoan) VALUES (?, ?, NULL)",
@@ -57,15 +57,15 @@ export const addOrder = async (req, res) => {
       final_ma_khach_hang = ins.insertId;
     }
 
-    // Insert into donhang with recipient info
+    // Chèn bản ghi vào `donhang` kèm thông tin người nhận
     const [order] = await db.query(
       "INSERT INTO donhang (ma_khach_hang, ten_nguoi_nhan, so_dien_thoai_nhan, dia_chi_nhan, tong_tien, thoi_gian_mua) VALUES (?, ?, ?, ?, ?, NOW())",
       [final_ma_khach_hang, ten_nguoi_nhan || null, so_dien_thoai_nhan || null, dia_chi_nhan || null, tong_tien]
     );
     const ma_don_hang = order.insertId;
 
-    // Insert detail rows into chitiet_donhang. Triggers will update stock and history.
-    // Record stock before inserting details so we can detect/neutralize any automatic DB trigger changes
+    // Chèn chi tiết đơn vào `chitiet_donhang`.
+    // Ghi nhận tồn kho trước khi chèn chi tiết để phát hiện và trung hòa những thay đổi tự động do trigger DB (nếu có)
     const beforeStockMap = {};
     for (const ct of chi_tiet) {
       if (beforeStockMap[ct.ma_san_pham] === undefined) {
@@ -78,7 +78,7 @@ export const addOrder = async (req, res) => {
       );
     }
 
-    // After inserting details, if any DB trigger auto-decremented stock, restore the difference so creation does not change stock.
+    // Sau khi chèn chi tiết, nếu trigger DB tự động giảm tồn kho, phục hồi phần chênh lệch để việc tạo đơn không làm thay đổi tồn kho.
     try {
       for (const ct of chi_tiet) {
         const [[afterRow]] = await db.query("SELECT so_luong_ton FROM sanpham WHERE ma_san_pham = ?", [ct.ma_san_pham]);
@@ -94,11 +94,11 @@ export const addOrder = async (req, res) => {
         }
       }
     } catch (e) {
-      console.error('Warning: failed to neutralize automatic stock changes after order creation', e);
+      console.error('Cảnh báo: không thể trung hòa thay đổi tồn kho tự động sau khi tạo đơn', e);
     }
 
-    // Do NOT change product stock at order creation.
-    // Stock adjustments happen only when order status is updated to 'hoan_tat'.
+    // KHÔNG thay đổi tồn kho khi tạo đơn.
+    // Việc điều chỉnh tồn kho chỉ thực hiện khi trạng thái đơn được cập nhật thành 'hoan_tat'.
 
     res.status(201).json({ message: "Tạo đơn hàng thành công", ma_don_hang });
   } catch (err) {
@@ -155,13 +155,13 @@ export const updateOrderStatus = async (req, res) => {
     const { trang_thai } = req.body;
     if (!trang_thai) return res.status(400).json({ message: "Thiếu trạng thái" });
 
-    // Validate against allowed enum values in the database schema
+    // Kiểm tra giá trị trạng thái có hợp lệ so với enum trong schema
     const allowed = ["cho_xu_ly", "hoan_tat", "huy"];
     if (!allowed.includes(trang_thai)) {
       return res.status(400).json({ message: "Trạng thái không hợp lệ" });
     }
 
-    // If transitioning to 'hoan_tat' from a non-completed state, deduct stock for items in the order.
+    // Nếu chuyển trạng thái sang 'hoan_tat' (hoàn tất), sẽ trừ tồn cho các sản phẩm trong đơn.
     const connection = await db.getConnection();
     try {
       await connection.beginTransaction();
@@ -174,16 +174,16 @@ export const updateOrderStatus = async (req, res) => {
 
       const prevStatus = current.trang_thai;
 
-      // If moving into 'hoan_tat' from a different state, apply stock deduction
+      // Nếu trạng thái trước đó khác 'hoan_tat' và hiện đang chuyển thành 'hoan_tat', thực hiện trừ tồn
       if (prevStatus !== 'hoan_tat' && trang_thai === 'hoan_tat') {
-        // Get order items
+        // Lấy các sản phẩm trong đơn
         const [items] = await connection.query("SELECT ma_san_pham, so_luong FROM chitiet_donhang WHERE ma_don_hang = ?", [id]);
         for (const it of items) {
           const qty = Number(it.so_luong || 0);
           if (qty <= 0) continue;
-          // Decrease stock but never set below 0
+          // Trừ tồn kho nhưng không cho giá trị xuống dưới 0
           await connection.query("UPDATE sanpham SET so_luong_ton = GREATEST(0, so_luong_ton - ?) WHERE ma_san_pham = ?", [qty, it.ma_san_pham]);
-          // Insert stock history (negative change)
+          // Ghi lịch sử tồn kho (thay đổi âm)
           await connection.query(
             "INSERT INTO lichsu_tonkho (ma_san_pham, so_luong_thay_doi, ly_do, ngay_thay_doi) VALUES (?, ?, ?, NOW())",
             [it.ma_san_pham, -qty, `Trừ tồn khi hoàn tất đơn ${id}`]
@@ -191,7 +191,7 @@ export const updateOrderStatus = async (req, res) => {
         }
       }
 
-      // Update order status
+      // Cập nhật trạng thái đơn hàng
       await connection.query("UPDATE donhang SET trang_thai = ? WHERE ma_don_hang = ?", [trang_thai, id]);
 
       await connection.commit();

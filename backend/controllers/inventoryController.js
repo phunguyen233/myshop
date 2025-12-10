@@ -25,9 +25,9 @@ export const getInventoryHistory = async (req, res) => {
 // Tính tồn kho tới một ngày (inclusive)
 export const getInventoryAsOf = async (req, res) => {
   try {
-    const { date } = req.query; // expected YYYY-MM-DD or full datetime
+    const { date } = req.query; // mong đợi định dạng YYYY-MM-DD hoặc datetime đầy đủ
     if (!date) return res.status(400).json({ message: "Thiếu tham số date" });
-    // Compute stock as of date by subtracting any changes after the date from current stock
+    // Tính tồn kho tới ngày chỉ định bằng cách trừ đi các thay đổi sau ngày đó khỏi tồn kho hiện tại
     const [rows] = await db.query(
       `SELECT s.ma_san_pham, s.ten_san_pham,
         (s.so_luong_ton - COALESCE((SELECT SUM(l2.so_luong_thay_doi) FROM lichsu_tonkho l2 WHERE l2.ma_san_pham = s.ma_san_pham AND l2.ngay_thay_doi > ?),0)) AS so_luong_as_of

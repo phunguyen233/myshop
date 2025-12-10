@@ -1,4 +1,4 @@
-// controllers/paymentController.js
+// controllers/paymentController.js - Bộ điều khiển thanh toán
 import db from "../config/db.js";
 
 export const generateQR = (req, res) => {
@@ -10,7 +10,7 @@ export const generateQR = (req, res) => {
     });
   }
 
-  const bank = "970422"; // MB Bank
+  const bank = "970422"; // Ngân hàng MB (MB Bank)
   const account = "0945079155";
 
   const qrUrl = `https://img.vietqr.io/image/${bank}-${account}-compact2.jpg?amount=${amount}&addInfo=${encodeURIComponent(
@@ -44,8 +44,8 @@ export const cancelOrder = async (req, res) => {
       return res.status(400).json({ message: "Đơn hàng đã bị hủy" });
     }
 
-    // Per requirement: cancelling an order will NOT restore stock.
-    // Only set order status to 'huy'. Stock is adjusted only when an order reaches 'hoan_tat'.
+    // Theo yêu cầu: khi hủy đơn không hoàn trả tồn kho.
+    // Chỉ cập nhật trạng thái `huy`. Việc thay đổi tồn kho chỉ thực hiện khi đơn được xử lý hoàn tất ('hoan_tat').
     await connection.query("UPDATE donhang SET trang_thai = 'huy' WHERE ma_don_hang = ?", [ma_don_hang]);
 
     await connection.commit();

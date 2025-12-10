@@ -18,7 +18,7 @@ export const getStatistics = async (req, res) => {
       groupExpr = "YEAR(DATE_ADD(d.thoi_gian_mua, INTERVAL 7 HOUR))";
       selectExpr = groupExpr;
     } else {
-      // default month
+      // Mặc định: nhóm theo tháng
       groupExpr = "DATE_FORMAT(DATE_ADD(d.thoi_gian_mua, INTERVAL 7 HOUR), '%Y-%m')";
       selectExpr = groupExpr;
     }
@@ -34,10 +34,10 @@ export const getStatistics = async (req, res) => {
       GROUP BY ${groupExpr}
       ORDER BY date ASC
     `;
-    console.log("Orders Query:", ordersQuery);
+    console.log("Truy vấn đơn hàng:", ordersQuery);
 
     const [orderRows] = await db.query(ordersQuery, [startDate, endDate]);
-    console.log("Order rows:", orderRows);
+    console.log("Kết quả đơn hàng:", orderRows);
 
     // Receipts query
     const receiptsGroupExpr = groupExpr.replace(/d\.thoi_gian_mua/g, 'n.thoi_gian_nhap');
@@ -52,10 +52,10 @@ export const getStatistics = async (req, res) => {
       GROUP BY ${receiptsGroupExpr}
       ORDER BY date ASC
     `;
-    console.log("Receipts Query:", receiptsQuery);
+    console.log("Truy vấn phiếu nhập:", receiptsQuery);
 
     const [receiptRows] = await db.query(receiptsQuery, [startDate, endDate]);
-    console.log("Receipt rows:", receiptRows);
+    console.log("Kết quả phiếu nhập:", receiptRows);
 
     // Merge data
     const statMap = new Map();
@@ -116,7 +116,7 @@ export const getStatistics = async (req, res) => {
     res.json({ stats, totalRevenue, totalOrders, inventoryCost, profit });
 
   } catch (err) {
-    console.error("Error in getStatistics:", err);
+    console.error("Lỗi khi lấy thống kê:", err);
     res.status(500).json({ message: "Lỗi khi lấy thống kê", error: err.message });
   }
 };

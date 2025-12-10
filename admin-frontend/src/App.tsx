@@ -9,6 +9,8 @@ import Orders from "./pages/Orders";
 import Warehouse from "./pages/Warehouse";
 import Inventory from "./pages/Inventory";
 import Statistics from "./pages/Statistics";
+import Ingredients from "./pages/Ingredients";
+import Recipes from "./pages/Recipes";
 import Auth from "./pages/Auth";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { ThemeProvider } from "./contexts/ThemeContext";
@@ -28,6 +30,8 @@ function InnerApp() {
               <Route path="/" element={<RequireAuth><Dashboard /></RequireAuth>} />
               <Route path="/products" element={<RequireAuth><Products /></RequireAuth>} />
               <Route path="/customers" element={<RequireAuth><Customers /></RequireAuth>} />
+              <Route path="/ingredients" element={<RequireAuth><Ingredients /></RequireAuth>} />
+              <Route path="/recipes" element={<RequireAuth><Recipes /></RequireAuth>} />
               <Route path="/orders" element={<RequireAuth><Orders /></RequireAuth>} />
               <Route path="/warehouse" element={<RequireAuth><Warehouse /></RequireAuth>} />
               <Route path="/inventory" element={<RequireAuth><Inventory /></RequireAuth>} />

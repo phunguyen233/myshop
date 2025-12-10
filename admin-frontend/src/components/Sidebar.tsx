@@ -36,6 +36,22 @@ export default function Sidebar() {
           {!sidebarCollapsed && <span>Sản phẩm</span>}
         </Link>
 
+        {/* Nguyên liệu */}
+        <Link to="/ingredients" className={linkClass("/ingredients")}>
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className={`h-5 w-5 ${sidebarCollapsed ? "" : "mr-3"}`}>
+            <path d="M12 2l3 7h7l-5.5 4 2 7L12 16 5.5 20l2-7L2 9h7z" />
+          </svg>
+          {!sidebarCollapsed && <span>Nguyên liệu</span>}
+        </Link>
+
+        {/* Công thức */}
+        <Link to="/recipes" className={linkClass("/recipes")}>
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className={`h-5 w-5 ${sidebarCollapsed ? "" : "mr-3"}`}>
+            <path d="M4 6h16v2H4V6zm0 5h10v2H4v-2zm0 5h7v2H4v-2z" />
+          </svg>
+          {!sidebarCollapsed && <span>Công thức</span>}
+        </Link>
+
         {/* Quản lý khách hàng */}
         <Link to="/customers" className={linkClass("/customers")}>
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className={`h-5 w-5 ${sidebarCollapsed ? "" : "mr-3"}`}>

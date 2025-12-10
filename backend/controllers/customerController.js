@@ -14,11 +14,11 @@ export const getCustomers = async (req, res) => {
 export const addCustomer = async (req, res) => {
   try {
     const { ho_ten, so_dien_thoai, ma_tai_khoan } = req.body;
-    // If ma_tai_khoan provided, ensure we don't create duplicate customer rows for same account
+    // Nếu có `ma_tai_khoan`, đảm bảo không tạo bản ghi khách hàng trùng cho cùng tài khoản
     if (ma_tai_khoan) {
       const [exists] = await db.query("SELECT * FROM khachhang WHERE ma_tai_khoan = ?", [ma_tai_khoan]);
       if (exists.length > 0) {
-        // Return existing customer id instead of creating a new row
+        // Trả về `ma_khach_hang` hiện có thay vì tạo bản ghi mới
         return res.status(200).json({ message: "Khách hàng đã tồn tại cho tài khoản này", ma_khach_hang: exists[0].ma_khach_hang });
       }
     }
@@ -38,7 +38,7 @@ export const updateCustomer = async (req, res) => {
   try {
     const { id } = req.params;
     const { ho_ten, so_dien_thoai, ma_tai_khoan } = req.body;
-    // If trying to assign ma_tai_khoan, ensure it's not already used by other customer
+    // Nếu cố gắng gán `ma_tai_khoan`, đảm bảo nó chưa được gán cho khách hàng khác
     if (ma_tai_khoan) {
       const [rows] = await db.query("SELECT * FROM khachhang WHERE ma_tai_khoan = ? AND ma_khach_hang <> ?", [ma_tai_khoan, id]);
       if (rows.length > 0) {
@@ -72,7 +72,7 @@ export const getCustomerOrders = async (req, res) => {
       "SELECT d.ma_don_hang, d.ma_khach_hang, d.ten_nguoi_nhan, d.so_dien_thoai_nhan, d.dia_chi_nhan, d.tong_tien, d.trang_thai, DATE_FORMAT(CONVERT_TZ(d.thoi_gian_mua, @@session.time_zone, '+07:00'), '%Y-%m-%d %H:%i:%s') as thoi_gian_mua FROM donhang d WHERE d.ma_khach_hang = ? ORDER BY d.thoi_gian_mua DESC",
       [id]
     );
-    // For each order, fetch items
+    // Với mỗi đơn hàng, lấy chi tiết sản phẩm trong đơn
     const results = [];
     for (const o of orders) {
       const [items] = await db.query(
