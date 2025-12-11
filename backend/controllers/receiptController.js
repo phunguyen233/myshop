@@ -15,13 +15,34 @@ export const addReceipt = async (req, res) => {
         [ma_nguyen_lieu, so_luong_nhap, don_vi_id, don_gia || 0]
       );
 
-      // Tăng tồn kho nguyên liệu
-      await connection.query("UPDATE nguyenlieu SET so_luong_ton = so_luong_ton + ? WHERE ma_nguyen_lieu = ?", [so_luong_nhap, ma_nguyen_lieu]);
+      // Lấy thông tin đơn vị lưu trữ của nguyên liệu và hệ số quy đổi
+      const [nlRows] = await connection.query(
+        `SELECT nl.don_vi_id AS nl_don_vi_id, d.he_so_quy_doi AS nl_he_so, din.he_so_quy_doi AS incoming_he_so
+         FROM nguyenlieu nl
+         LEFT JOIN donvi d ON nl.don_vi_id = d.id
+         LEFT JOIN donvi din ON din.id = ?
+         WHERE nl.ma_nguyen_lieu = ?`,
+        [don_vi_id, ma_nguyen_lieu]
+      );
 
-      // Ghi lich su ton kho (nếu có bảng lichsu_tonkho)
+      const info = nlRows && nlRows[0] ? nlRows[0] : null;
+      // Nếu không có thông tin đơn vị, fallback: cộng trực tiếp
+      let converted = Number(so_luong_nhap);
+      if (info && info.nl_he_so && info.incoming_he_so) {
+        // Chuyển số lượng nhập (theo đơn vị incoming) về đơn vị của nguyên liệu
+        // công thức: converted = so_luong_nhap * incoming_he_so / nl_he_so
+        const nl_he_so = Number(info.nl_he_so) || 1;
+        const incoming_he_so = Number(info.incoming_he_so) || 1;
+        converted = (Number(so_luong_nhap) * incoming_he_so) / nl_he_so;
+      }
+
+      // Tăng tồn kho nguyên liệu bằng lượng đã quy đổi về đơn vị lưu trữ
+      await connection.query("UPDATE nguyenlieu SET so_luong_ton = so_luong_ton + ? WHERE ma_nguyen_lieu = ?", [converted, ma_nguyen_lieu]);
+
+      // Ghi lich su ton kho (nếu có bảng lichsu_tonkho) - ghi lượng đã quy đổi
       await connection.query(
         "INSERT INTO lichsu_tonkho (ma_san_pham, so_luong_thay_doi, ly_do, ngay_thay_doi) VALUES (?, ?, ?, NOW())",
-        [ma_nguyen_lieu, so_luong_nhap, `Nhập kho nguyên liệu (phiếu ${ins.insertId})`]
+        [ma_nguyen_lieu, converted, `Nhập kho nguyên liệu (phiếu ${ins.insertId})`]
       );
 
       await connection.commit();

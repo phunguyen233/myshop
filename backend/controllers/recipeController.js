@@ -3,11 +3,26 @@ import db from "../config/db.js";
 export const getRecipes = async (req, res) => {
   try {
     const [rows] = await db.query(
-      `SELECT c.id, c.ma_san_pham, c.ma_nguyen_lieu, c.so_luong_can, c.don_vi_id, s.ten_san_pham, nl.ten_nguyen_lieu, d.ten as don_vi
+      `SELECT c.id,
+              c.ma_san_pham,
+              c.ma_nguyen_lieu,
+              c.so_luong_can,
+              c.don_vi_id AS recipe_don_vi_id,
+              s.ten_san_pham,
+              nl.ten_nguyen_lieu,
+              nl.gia_nhap AS nguyenlieu_gia_nhap,
+              nl.don_vi_id AS nl_don_vi_id,
+              d.ten as recipe_don_vi,
+              du.ten as nguyenlieu_don_vi,
+              d.he_so_quy_doi AS recipe_he_so,
+              du.he_so_quy_doi AS nl_he_so,
+              -- cost for this recipe line converted to ingredient's unit price
+              ((c.so_luong_can * COALESCE(d.he_so_quy_doi,1)) / NULLIF(COALESCE(du.he_so_quy_doi,1),0)) * COALESCE(nl.gia_nhap,0) AS cost_per_line
        FROM congthuc_sanpham c
        LEFT JOIN sanpham s ON c.ma_san_pham = s.ma_san_pham
        LEFT JOIN nguyenlieu nl ON c.ma_nguyen_lieu = nl.ma_nguyen_lieu
        LEFT JOIN donvi d ON c.don_vi_id = d.id
+       LEFT JOIN donvi du ON nl.don_vi_id = du.id
        ORDER BY c.ma_san_pham`)
     ;
     res.json(rows);
@@ -32,11 +47,13 @@ export const createRecipe = async (req, res) => {
       );
     }
 
-    // Optionally calculate total ingredient cost for this product
+    // Calculate total ingredient cost for this product taking unit conversion into account
     const [costRows] = await db.query(
-      `SELECT SUM((c.so_luong_can) * (nl.gia_nhap)) AS total_cost
+      `SELECT SUM(((c.so_luong_can * COALESCE(d.he_so_quy_doi,1)) / NULLIF(COALESCE(du.he_so_quy_doi,1),0)) * COALESCE(nl.gia_nhap,0)) AS total_cost
        FROM congthuc_sanpham c
        LEFT JOIN nguyenlieu nl ON c.ma_nguyen_lieu = nl.ma_nguyen_lieu
+       LEFT JOIN donvi d ON c.don_vi_id = d.id
+       LEFT JOIN donvi du ON nl.don_vi_id = du.id
        WHERE c.ma_san_pham = ?`,
       [ma_san_pham]
     );
@@ -52,10 +69,13 @@ export const getRecipeByProduct = async (req, res) => {
   try {
     const { productId } = req.params;
     const [rows] = await db.query(
-      `SELECT c.*, nl.ten_nguyen_lieu, nl.gia_nhap, d.ten as don_vi
+      `SELECT c.*, nl.ten_nguyen_lieu, nl.gia_nhap AS nguyenlieu_gia_nhap, nl.don_vi_id AS nl_don_vi_id, d.ten as recipe_don_vi, du.ten as nguyenlieu_don_vi,
+              d.he_so_quy_doi AS recipe_he_so, du.he_so_quy_doi AS nl_he_so,
+              ((c.so_luong_can * COALESCE(d.he_so_quy_doi,1)) / NULLIF(COALESCE(du.he_so_quy_doi,1),0)) * COALESCE(nl.gia_nhap,0) AS cost_per_line
        FROM congthuc_sanpham c
        LEFT JOIN nguyenlieu nl ON c.ma_nguyen_lieu = nl.ma_nguyen_lieu
        LEFT JOIN donvi d ON c.don_vi_id = d.id
+       LEFT JOIN donvi du ON nl.don_vi_id = du.id
        WHERE c.ma_san_pham = ?`,
       [productId]
     );
