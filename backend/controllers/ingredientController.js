@@ -50,3 +50,31 @@ export const getIngredientById = async (req, res) => {
     res.status(500).json({ message: "Lỗi khi lấy chi tiết nguyên liệu" });
   }
 };
+
+export const updateIngredient = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { ten_nguyen_lieu, so_luong_ton, don_vi_id, gia_nhap } = req.body;
+    const [result] = await db.query(
+      "UPDATE nguyenlieu SET ten_nguyen_lieu = ?, so_luong_ton = ?, don_vi_id = ?, gia_nhap = ? WHERE ma_nguyen_lieu = ?",
+      [ten_nguyen_lieu, so_luong_ton || 0, don_vi_id, gia_nhap || 0, id]
+    );
+    if (result.affectedRows === 0) return res.status(404).json({ message: 'Nguyên liệu không tồn tại' });
+    res.json({ message: 'Cập nhật nguyên liệu thành công' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Lỗi khi cập nhật nguyên liệu' });
+  }
+};
+
+export const deleteIngredient = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const [result] = await db.query("DELETE FROM nguyenlieu WHERE ma_nguyen_lieu = ?", [id]);
+    if (result.affectedRows === 0) return res.status(404).json({ message: 'Nguyên liệu không tồn tại' });
+    res.json({ message: 'Xóa nguyên liệu thành công' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Lỗi khi xóa nguyên liệu' });
+  }
+};

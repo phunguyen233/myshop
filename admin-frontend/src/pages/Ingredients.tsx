@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { ingredientAPI } from "../api/ingredientAPI";
+import axiosClient from "../api/axiosClient";
 import { unitAPI } from "../api/unitAPI";
 import { receiptAPI } from "../api/receiptAPI";
 
@@ -7,6 +8,7 @@ const Ingredients: React.FC = () => {
   const [items, setItems] = useState<any[]>([]);
   const [units, setUnits] = useState<any[]>([]);
   const [form, setForm] = useState({ ten_nguyen_lieu: "", so_luong_ton: 0, don_vi_id: 0, gia_nhap: 0 });
+  const [editingId, setEditingId] = useState<number | null>(null);
   const [receipt, setReceipt] = useState({ ma_nguyen_lieu: 0, so_luong_nhap: 0, don_vi_id: 0, don_gia: 0 });
   const [addLoading, setAddLoading] = useState(false);
   const [addError, setAddError] = useState("");
@@ -47,17 +49,49 @@ const Ingredients: React.FC = () => {
 
     try {
       setAddLoading(true);
-      await ingredientAPI.add(form);
+      if (editingId) {
+        // Try to update via PUT — backend may not support update; show error if it fails
+        try {
+          await axiosClient.put(`/ingredients/${editingId}`, form);
+          setSuccessMsg("Cập nhật nguyên liệu thành công!");
+        } catch (e) {
+          console.error('Update failed', e);
+          alert('Backend chưa hỗ trợ cập nhật nguyên liệu.');
+        }
+      } else {
+        await ingredientAPI.add(form);
+        setSuccessMsg("Thêm nguyên liệu thành công!");
+      }
       const list = await ingredientAPI.getAll();
       setItems(list);
       setForm({ ten_nguyen_lieu: "", so_luong_ton: 0, don_vi_id: 0, gia_nhap: 0 });
-      setSuccessMsg("Thêm nguyên liệu thành công!");
+      setEditingId(null);
       setTimeout(() => setSuccessMsg(""), 3000);
     } catch (err: any) {
       console.error(err);
       setAddError(err?.response?.data?.message || "Lỗi khi thêm nguyên liệu");
     } finally {
       setAddLoading(false);
+    }
+  };
+
+  const handleEdit = (item: any) => {
+    setEditingId(item.ma_nguyen_lieu);
+    setForm({ ten_nguyen_lieu: item.ten_nguyen_lieu, so_luong_ton: item.so_luong_ton || 0, don_vi_id: item.don_vi_id || 0, gia_nhap: item.gia_nhap || 0 });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleDelete = async (id: number) => {
+    if (!window.confirm('Bạn chắc chắn muốn xóa nguyên liệu này?')) return;
+    try {
+      // Try delete — backend may not provide delete endpoint
+      await axiosClient.delete(`/ingredients/${id}`);
+      const list = await ingredientAPI.getAll();
+      setItems(list);
+      alert('Xóa nguyên liệu thành công');
+    } catch (e) {
+      console.error('Delete failed', e);
+      alert('Backend chưa hỗ trợ xóa nguyên liệu.');
     }
   };
 
@@ -289,6 +323,7 @@ const Ingredients: React.FC = () => {
                 <th className="p-3 font-medium text-right">Số lượng</th>
                 <th className="p-3 font-medium">Đơn vị</th>
                 <th className="p-3 font-medium text-right">Giá nhập</th>
+                <th className="p-3 font-medium text-center">Hành động</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -298,7 +333,7 @@ const Ingredients: React.FC = () => {
                     Chưa có nguyên liệu nào
                   </td>
                 </tr>
-              ) : (
+                ) : (
                 items.map(i => (
                   <tr key={i.ma_nguyen_lieu} className="hover:bg-muted/50 transition-colors">
                     <td className="p-3 text-foreground">{i.ma_nguyen_lieu}</td>
@@ -306,6 +341,12 @@ const Ingredients: React.FC = () => {
                     <td className="p-3 text-right text-foreground">{i.so_luong_ton}</td>
                     <td className="p-3 text-foreground">{i.don_vi}</td>
                     <td className="p-3 text-right text-foreground">{(i.gia_nhap || 0).toLocaleString('vi-VN')}₫</td>
+                    <td className="p-3 text-center">
+                      <div className="flex items-center justify-center gap-2">
+                        <button onClick={() => handleEdit(i)} className="px-3 py-1 rounded bg-white border border-border hover:bg-green-600 hover:text-white text-foreground text-xs">Sửa</button>
+                        <button onClick={() => handleDelete(i.ma_nguyen_lieu)} className="px-3 py-1 rounded bg-white border border-border hover:bg-red-600 hover:text-white text-foreground text-xs">Xóa</button>
+                      </div>
+                    </td>
                   </tr>
                 ))
               )}

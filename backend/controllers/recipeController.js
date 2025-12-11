@@ -85,3 +85,14 @@ export const getRecipeByProduct = async (req, res) => {
     res.status(500).json({ message: "Lỗi khi lấy công thức sản phẩm" });
   }
 };
+
+export const deleteRecipeByProduct = async (req, res) => {
+  try {
+    const { productId } = req.params;
+    const [result] = await db.query("DELETE FROM congthuc_sanpham WHERE ma_san_pham = ?", [productId]);
+    res.json({ message: 'Xóa công thức thành công', affected: result.affectedRows });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Lỗi khi xóa công thức' });
+  }
+};
