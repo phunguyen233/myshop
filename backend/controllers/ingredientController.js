@@ -70,6 +70,12 @@ export const updateIngredient = async (req, res) => {
 export const deleteIngredient = async (req, res) => {
   try {
     const { id } = req.params;
+    // Kiểm tra xem nguyên liệu có được sử dụng trong bất kỳ công thức sản phẩm nào không
+    const [used] = await db.query("SELECT 1 FROM congthuc_sanpham WHERE ma_nguyen_lieu = ? LIMIT 1", [id]);
+    if (used.length > 0) {
+      return res.status(409).json({ message: 'Nguyên liệu đang được sử dụng trong công thức, không thể xóa' });
+    }
+
     const [result] = await db.query("DELETE FROM nguyenlieu WHERE ma_nguyen_lieu = ?", [id]);
     if (result.affectedRows === 0) return res.status(404).json({ message: 'Nguyên liệu không tồn tại' });
     res.json({ message: 'Xóa nguyên liệu thành công' });
