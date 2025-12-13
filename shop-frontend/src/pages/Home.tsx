@@ -214,7 +214,7 @@ export default function Home() {
           {products.slice(0,4).map((p) => (
             <div key={p.id} className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 text-center">
               <div className="w-40 h-40 mx-auto mb-3 rounded-full overflow-hidden bg-gray-50 flex items-center justify-center">
-                <img src={p.hinh_anh || '/placeholder.png'} alt={p.ten_san_pham} onError={(e:any)=>e.currentTarget.src='/placeholder.png'} className="w-full h-full object-contain" />
+                <img src={require('../api/imageHelper').resolveImageUrl(p.hinh_anh)} alt={p.ten_san_pham} onError={(e:any)=>e.currentTarget.src='/placeholder.png'} className="w-full h-full object-contain" />
               </div>
               <div className="text-sm text-muted-foreground">NƯỚC ÉP</div>
               <div className="text-lg font-bold text-gray-800">{p.ten_san_pham}</div>

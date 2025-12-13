@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { Product } from "../types/Product";
 import CartProduct from "../components/cartProduct";
+import { resolveImageUrl } from "../api/imageHelper";
 
 const API_URL = "https://bepmam-backend.onrender.com/api/products";
 
@@ -109,7 +110,7 @@ export default function ShopProducts() {
                 style={{ position: "relative", width: "100%", paddingTop: "100%", }}
               >
                 <img
-                  src={p.hinh_anh || "/placeholder.png"}
+                  src={resolveImageUrl(p.hinh_anh)}
                   alt={p.ten_san_pham}
                   onError={(e: any) => {
                     e.currentTarget.src = "/placeholder.png";

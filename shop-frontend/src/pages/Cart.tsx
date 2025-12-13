@@ -144,7 +144,7 @@ export default function Cart() {
         <div className="space-y-4">
           {cart.map((c) => (
             <div key={c.id} className="flex items-center gap-4 border p-3 rounded">
-              <img src={c.hinh_anh || '/placeholder.png'} alt={c.ten_san_pham} style={{ width: 80, height: 80, objectFit: 'cover', borderRadius: 8 }} />
+              <img src={require('../api/imageHelper').resolveImageUrl(c.hinh_anh)} alt={c.ten_san_pham} style={{ width: 80, height: 80, objectFit: 'cover', borderRadius: 8 }} />
               <div className="flex-1">
                 <div className="font-semibold">{c.ten_san_pham}</div>
                 <div className="text-green-600 font-bold">{Number(c.gia_ban || c.price || 0).toLocaleString()}đ</div>

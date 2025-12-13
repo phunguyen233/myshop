@@ -15,7 +15,7 @@ export default function CartProduct({ product, onClose, onAddToCart }: Props) {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-6">
           <div className="flex items-center justify-center">
             <img
-              src={product.hinh_anh || '/placeholder.png'}
+              src={require('../api/imageHelper').resolveImageUrl(product.hinh_anh)}
               alt={product.ten_san_pham}
               onError={(e: any) => (e.currentTarget.src = '/placeholder.png')}
               className="w-full h-72 object-cover rounded-lg"

@@ -15,6 +15,9 @@ import unitRoutes from "./routes/unitRoutes.js";
 import ingredientRoutes from "./routes/ingredientRoutes.js";
 import recipeRoutes from "./routes/recipeRoutes.js";
 import receiptRoutes from "./routes/receiptRoutes.js";
+import uploadRoutes from "./routes/uploadRoutes.js";
+import path from "path";
+import fs from "fs";
 
 dotenv.config();
 
@@ -35,6 +38,11 @@ app.use("/api/units", unitRoutes);
 app.use("/api/ingredients", ingredientRoutes);
 app.use("/api/recipes", recipeRoutes);
 app.use("/api/ingredient-receipts", receiptRoutes);
+// Ensure uploads folder exists and serve it
+const uploadsPath = path.join(process.cwd(), 'backend', 'uploads');
+if (!fs.existsSync(uploadsPath)) fs.mkdirSync(uploadsPath, { recursive: true });
+app.use('/uploads', express.static(uploadsPath));
+app.use('/api/uploads', uploadRoutes);
 
 app.get("/", (req, res) => {
   res.send("🚀 API Hệ thống quản lý cửa hàng đang hoạt động!");

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { productAPI } from "../api/productAPI";
 import { Product } from "../types/Product";
+import axiosClient from "../api/axiosClient";
 
 export default function Products() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -16,6 +17,8 @@ export default function Products() {
     hinh_anh: "",
     mo_ta: "",
   });
+  const [uploading, setUploading] = useState(false);
+  const [preview, setPreview] = useState<string | null>(null);
   const [productFieldErrors, setProductFieldErrors] = useState<{ ten_san_pham?: string; gia_ban?: string; }>({});
 
   // Lấy danh sách sản phẩm
@@ -191,13 +194,27 @@ export default function Products() {
               {/* Removed Số lượng tồn input as requested */}
               <div>
                 <label className="block text-sm font-semibold mb-1">URL Hình ảnh</label>
-                <input
-                  type="text"
-                  name="hinh_anh"
-                  value={formData.hinh_anh}
-                  onChange={handleInputChange}
-                  className="w-full border border-input bg-background rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-black"
-                />
+                <div className="flex gap-2 items-center">
+                  <input type="file" accept="image/*" onChange={async (e) => {
+                    const f = e.target.files && e.target.files[0];
+                    if (!f) return;
+                    try {
+                      setUploading(true);
+                      const fd = new FormData();
+                      fd.append('file', f);
+                      const res = await axiosClient.post('/uploads', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+                      const url = res.data.url;
+                      setFormData(prev => ({ ...prev, hinh_anh: url } as Product));
+                      setPreview(url);
+                    } catch (err) {
+                      console.error('Upload failed', err);
+                      alert('Tải ảnh lên thất bại');
+                    } finally { setUploading(false); }
+                  }} className="" />
+                  {uploading ? <div className="text-sm text-muted-foreground">Đang tải...</div> : null}
+                </div>
+                <input type="hidden" name="hinh_anh" value={formData.hinh_anh} />
+                {preview && <img src={preview} alt="preview" className="mt-2 w-32 h-20 object-cover rounded" />}
               </div>
               <div>
                 <label className="block text-sm font-semibold mb-1">Mô tả</label>
