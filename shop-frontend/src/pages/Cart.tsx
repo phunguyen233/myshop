@@ -24,10 +24,6 @@ export default function Cart() {
     const next = cart.map((c) => {
       if (c.id !== id) return c;
       const desired = (c.quantity || 1) + 1;
-      if (desired > (c.so_luong_ton || 0)) {
-        alert('Không thể tăng, đã vượt quá tồn kho');
-        return c;
-      }
       return { ...c, quantity: desired };
     });
     save(next);

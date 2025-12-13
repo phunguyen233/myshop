@@ -27,6 +27,12 @@ const Ingredients: React.FC = () => {
       }
     };
     fetch();
+    const handler = (e: any) => {
+      // when orders deduct ingredients, refresh the list
+      fetch();
+    };
+    window.addEventListener('ingredientsUpdated', handler);
+    return () => window.removeEventListener('ingredientsUpdated', handler);
   }, []);
 
   const handleAdd = async () => {
@@ -156,6 +162,14 @@ const Ingredients: React.FC = () => {
     } catch (e) {
       return null;
     }
+  };
+
+  const fmtQty = (v: any) => {
+    const num = Number(v || 0);
+    if (!isFinite(num)) return String(v ?? '0');
+    if (Math.abs(num - Math.round(num)) < 1e-9) return String(Math.round(num));
+    // show up to 4 decimal places but trim trailing zeros
+    return num.toFixed(4).replace(/\.?0+$/, '');
   };
 
   return (
@@ -338,7 +352,7 @@ const Ingredients: React.FC = () => {
                   <tr key={i.ma_nguyen_lieu} className="hover:bg-muted/50 transition-colors">
                     <td className="p-3 text-foreground">{i.ma_nguyen_lieu}</td>
                     <td className="p-3 text-foreground font-medium">{i.ten_nguyen_lieu}</td>
-                    <td className="p-3 text-right text-foreground">{i.so_luong_ton}</td>
+                    <td className="p-3 text-right text-foreground">{fmtQty(i.so_luong_ton)}</td>
                     <td className="p-3 text-foreground">{i.don_vi}</td>
                     <td className="p-3 text-right text-foreground">{(i.gia_nhap || 0).toLocaleString('vi-VN')}₫</td>
                     <td className="p-3 text-center">

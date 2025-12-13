@@ -263,7 +263,6 @@ export default function Products() {
                   <th className="p-4 font-medium">Mã</th>
                   <th className="p-4 font-medium">Tên sản phẩm</th>
                   <th className="p-4 font-medium text-center">Giá bán</th>
-                  <th className="p-4 font-medium text-center">Tồn kho</th>
                   <th className="p-4 font-medium text-center">Hình ảnh</th>
                   <th className="p-4 font-medium text-center">Hành động</th>
                 </tr>
@@ -281,11 +280,6 @@ export default function Products() {
                       </div>
                     </td>
                     <td className="p-4 text-center text-foreground">{p.gia_ban.toLocaleString("vi-VN")}₫</td>
-                    <td className="p-4 text-center">
-                      <span className={`px-3 py-1 rounded-full text-xs font-semibold ${p.so_luong_ton < 5 ? "bg-red-100 text-red-600" : "bg-green-100 text-green-600"}`}>
-                        {p.so_luong_ton}
-                      </span>
-                    </td>
                     <td className="p-4 text-center">
                       {p.hinh_anh && (
                         <img src={p.hinh_anh} alt={p.ten_san_pham} className="w-10 h-10 object-cover rounded mx-auto border border-border" />

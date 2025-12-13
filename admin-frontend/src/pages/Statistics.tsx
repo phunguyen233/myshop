@@ -65,12 +65,12 @@ export default function StatisticsPage() {
       setReceiptsList(data.receiptsList || []);
 
       // Recompute totals from orders: totalRevenue should be sum of tong_tien
-      // for orders with trang_thai === 'hoan_tat' within the selected date range.
+      // for orders with trang_thai === 'da_thanh_toan' within the selected date range.
       try {
         const allOrders = await orderAPI.getAll();
         const completed = (allOrders || []).filter((o: any) => {
           const status = o.trang_thai || o.trangThai || o.status;
-          if (status !== 'hoan_tat') return false;
+          if (status !== 'da_thanh_toan') return false;
           const time = o.thoi_gian_mua || o.created_at || o.createdAt || o.time;
           if (!time) return false;
           const d = new Date(time);

@@ -37,14 +37,9 @@ export default function ShopProducts() {
 
   const handleAddToCart = (product: Product) => {
     try {
-      // prevent adding if out of stock
-      // Prevent adding if product is hidden or out of stock
+      // Prevent adding if product is hidden (admin can hide)
       if (!product.hien_thi) {
         alert('Sản phẩm hiện không có sẵn để đặt (đang ẩn).');
-        return;
-      }
-      if ((product.so_luong_ton || 0) <= 0) {
-        alert('Sản phẩm hiện đang hết hàng');
         return;
       }
       const raw = localStorage.getItem("cart");
@@ -52,10 +47,6 @@ export default function ShopProducts() {
       const existing = cart.find((c) => c.id === product.id);
       if (existing) {
         const nextQty = (existing.quantity || 1) + 1;
-        if (nextQty > (product.so_luong_ton || 0)) {
-          alert('Không thể thêm nữa, số lượng vượt quá tồn kho');
-          return;
-        }
         existing.quantity = nextQty;
       } else {
         cart.push({ ...product, quantity: 1 });
@@ -136,13 +127,13 @@ export default function ShopProducts() {
               {/* Buttons row: left is Add-to-cart or 'Hết hàng' when out of stock; right is always 'Chi tiết' */}
               <div className="px-2 mt-3 flex gap-3 w-full">
                 {/* Left button: either active add-to-cart or disabled "Hết hàng" */}
-                {(!p.hien_thi || (p.so_luong_ton || 0) <= 0) ? (
+                {(!p.hien_thi) ? (
                   <button
                     type="button"
                     disabled
                     className="flex-1 bg-gray-300 text-white py-3.5 rounded-2xl cursor-not-allowed select-none"
                   >
-                    Hết hàng
+                    Không khả dụng
                   </button>
                 ) : (
                   <button

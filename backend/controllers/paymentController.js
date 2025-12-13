@@ -45,7 +45,7 @@ export const cancelOrder = async (req, res) => {
     }
 
     // Theo yêu cầu: khi hủy đơn không hoàn trả tồn kho.
-    // Chỉ cập nhật trạng thái `huy`. Việc thay đổi tồn kho chỉ thực hiện khi đơn được xử lý hoàn tất ('hoan_tat').
+    // Chỉ cập nhật trạng thái `huy`. Việc thay đổi tồn kho chỉ thực hiện khi đơn được cập nhật thành 'da_thanh_toan' (đã thanh toán).
     await connection.query("UPDATE donhang SET trang_thai = 'huy' WHERE ma_don_hang = ?", [ma_don_hang]);
 
     await connection.commit();

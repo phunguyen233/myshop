@@ -30,7 +30,7 @@ export const getStatistics = async (req, res) => {
         COUNT(d.ma_don_hang) AS orders
       FROM donhang d
       WHERE DATE(DATE_ADD(d.thoi_gian_mua, INTERVAL 7 HOUR)) BETWEEN ? AND ?
-        AND d.trang_thai = 'hoan_tat'
+        AND d.trang_thai = 'da_thanh_toan'
       GROUP BY ${groupExpr}
       ORDER BY date ASC
     `;
@@ -97,7 +97,7 @@ export const getStatistics = async (req, res) => {
         DATE_FORMAT(DATE_ADD(d.thoi_gian_mua, INTERVAL 7 HOUR), '%Y-%m-%d %H:%i:%s') AS thoi_gian_mua
         FROM donhang d
         WHERE DATE(DATE_ADD(d.thoi_gian_mua, INTERVAL 7 HOUR)) BETWEEN ? AND ? 
-        AND d.trang_thai = 'hoan_tat'
+        AND d.trang_thai = 'da_thanh_toan'
         ORDER BY d.thoi_gian_mua DESC`,
         [startDate, endDate]
       );

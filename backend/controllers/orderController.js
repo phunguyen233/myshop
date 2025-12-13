@@ -98,7 +98,7 @@ export const addOrder = async (req, res) => {
     }
 
     // KHÔNG thay đổi tồn kho khi tạo đơn.
-    // Việc điều chỉnh tồn kho chỉ thực hiện khi trạng thái đơn được cập nhật thành 'hoan_tat'.
+    // Việc điều chỉnh tồn kho chỉ thực hiện khi trạng thái đơn được cập nhật thành 'da_thanh_toan'.
 
     res.status(201).json({ message: "Tạo đơn hàng thành công", ma_don_hang });
   } catch (err) {
@@ -156,12 +156,12 @@ export const updateOrderStatus = async (req, res) => {
     if (!trang_thai) return res.status(400).json({ message: "Thiếu trạng thái" });
 
     // Kiểm tra giá trị trạng thái có hợp lệ so với enum trong schema
-    const allowed = ["cho_xu_ly", "hoan_tat", "huy"];
+    const allowed = ["cho_xu_ly", "da_thanh_toan", "dang_giao", "hoan_tat", "huy"];
     if (!allowed.includes(trang_thai)) {
       return res.status(400).json({ message: "Trạng thái không hợp lệ" });
     }
 
-    // Nếu chuyển trạng thái sang 'hoan_tat' (hoàn tất), sẽ trừ tồn cho các sản phẩm trong đơn.
+    // Nếu chuyển trạng thái sang 'da_thanh_toan' (đã thanh toán), sẽ trừ nguyên liệu theo công thức
     const connection = await db.getConnection();
     try {
       await connection.beginTransaction();
@@ -173,21 +173,102 @@ export const updateOrderStatus = async (req, res) => {
       }
 
       const prevStatus = current.trang_thai;
+      let deductions = null;
 
-      // Nếu trạng thái trước đó khác 'hoan_tat' và hiện đang chuyển thành 'hoan_tat', thực hiện trừ tồn
-      if (prevStatus !== 'hoan_tat' && trang_thai === 'hoan_tat') {
+      // Nếu trạng thái trước đó khác 'da_thanh_toan' và hiện đang chuyển thành 'da_thanh_toan', kiểm tra và trừ nguyên liệu theo công thức
+      if (prevStatus !== 'da_thanh_toan' && trang_thai === 'da_thanh_toan') {
         // Lấy các sản phẩm trong đơn
         const [items] = await connection.query("SELECT ma_san_pham, so_luong FROM chitiet_donhang WHERE ma_don_hang = ?", [id]);
+
+        // Tính tổng nguyên liệu cần thiết cho toàn đơn (group by ma_nguyen_lieu)
+        const neededMap = {}; // ma_nguyen_lieu -> needed quantity
         for (const it of items) {
-          const qty = Number(it.so_luong || 0);
-          if (qty <= 0) continue;
-          // Trừ tồn kho nhưng không cho giá trị xuống dưới 0
-          await connection.query("UPDATE sanpham SET so_luong_ton = GREATEST(0, so_luong_ton - ?) WHERE ma_san_pham = ?", [qty, it.ma_san_pham]);
-          // Ghi lịch sử tồn kho (thay đổi âm)
-          await connection.query(
-            "INSERT INTO lichsu_tonkho (ma_san_pham, so_luong_thay_doi, ly_do, ngay_thay_doi) VALUES (?, ?, ?, NOW())",
-            [it.ma_san_pham, -qty, `Trừ tồn khi hoàn tất đơn ${id}`]
+          const qtyOrdered = Number(it.so_luong || 0);
+          if (qtyOrdered <= 0) continue;
+
+          const [recipeLines] = await connection.query(
+            `SELECT c.ma_nguyen_lieu, c.so_luong_can,
+                    COALESCE(d.he_so_quy_doi,1) AS recipe_he_so,
+                    COALESCE(du.he_so_quy_doi,1) AS nl_he_so
+             FROM congthuc_sanpham c
+             LEFT JOIN donvi d ON c.don_vi_id = d.id
+             LEFT JOIN nguyenlieu nl ON c.ma_nguyen_lieu = nl.ma_nguyen_lieu
+             LEFT JOIN donvi du ON nl.don_vi_id = du.id
+             WHERE c.ma_san_pham = ?`,
+            [it.ma_san_pham]
           );
+
+          for (const line of recipeLines) {
+            const recipeQty = Number(line.so_luong_can || 0);
+            if (recipeQty <= 0) continue;
+            const recipeHs = Number(line.recipe_he_so || 1) || 1;
+            const nlHs = Number(line.nl_he_so || 1) || 1;
+            const needed = (recipeQty * recipeHs / nlHs) * qtyOrdered;
+            const deduct = Number(needed) || 0;
+            if (deduct <= 0) continue;
+            neededMap[line.ma_nguyen_lieu] = (neededMap[line.ma_nguyen_lieu] || 0) + deduct;
+          }
+        }
+
+        // Nếu không có nguyên liệu cần trừ thì bỏ qua
+        const neededKeys = Object.keys(neededMap);
+        if (neededKeys.length > 0) {
+          // Lấy tồn hiện tại cho các nguyên liệu cần thiết
+          const placeholders = neededKeys.map(() => '?').join(',');
+          const [stocks] = await connection.query(`SELECT ma_nguyen_lieu, so_luong_ton FROM nguyenlieu WHERE ma_nguyen_lieu IN (${placeholders})`, neededKeys);
+
+          // Kiểm tra thiếu hụt
+          const shortages = [];
+          const stockMap = {};
+          for (const s of stocks) stockMap[s.ma_nguyen_lieu] = Number(s.so_luong_ton || 0);
+          for (const k of neededKeys) {
+            const need = Number(neededMap[k] || 0);
+            const have = Number(stockMap[k] || 0);
+            if (have < need) {
+              shortages.push({ ma_nguyen_lieu: k, need, have });
+            }
+          }
+
+          if (shortages.length > 0) {
+            await connection.rollback();
+            return res.status(409).json({ message: 'Nguyên liệu không đủ để hoàn tất đơn', shortages });
+          }
+
+          // Nếu đủ, trừ nguyên liệu
+          deductions = [];
+          for (const k of neededKeys) {
+            const deduct = Number(neededMap[k] || 0);
+            if (deduct <= 0) continue;
+            // record before
+            const before = Number(stockMap[k] || 0);
+            await connection.query(
+              "UPDATE nguyenlieu SET so_luong_ton = GREATEST(0, so_luong_ton - ?) WHERE ma_nguyen_lieu = ?",
+              [deduct, k]
+            );
+            // we'll collect after values below
+            deductions.push({ ma_nguyen_lieu: k, deducted: deduct, before });
+          }
+
+          // Fetch after-values and unit/name for reporting
+          if (deductions.length > 0) {
+            const ids = deductions.map(d => d.ma_nguyen_lieu);
+            const placeholders2 = ids.map(() => '?').join(',');
+            const [afterRows] = await connection.query(
+              `SELECT n.ma_nguyen_lieu, n.ten_nguyen_lieu, n.so_luong_ton, d.ten as don_vi
+               FROM nguyenlieu n LEFT JOIN donvi d ON n.don_vi_id = d.id
+               WHERE n.ma_nguyen_lieu IN (${placeholders2})`,
+              ids
+            );
+            const afterMap = {};
+            for (const r of afterRows) afterMap[r.ma_nguyen_lieu] = r;
+            // enrich deductions
+            for (const dd of deductions) {
+              const a = afterMap[dd.ma_nguyen_lieu] || {};
+              dd.after = Number(a.so_luong_ton || 0);
+              dd.ten_nguyen_lieu = a.ten_nguyen_lieu || null;
+              dd.don_vi = a.don_vi || null;
+            }
+          }
         }
       }
 
@@ -201,7 +282,12 @@ export const updateOrderStatus = async (req, res) => {
         [id]
       );
 
-      res.json({ message: "Cập nhật trạng thái thành công", order });
+      // include deductions if any
+      if (typeof deductions !== 'undefined' && Array.isArray(deductions) && deductions.length > 0) {
+        res.json({ message: "Cập nhật trạng thái thành công", order, deductions });
+      } else {
+        res.json({ message: "Cập nhật trạng thái thành công", order });
+      }
     } catch (e) {
       await connection.rollback();
       console.error(e);

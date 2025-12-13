@@ -32,13 +32,13 @@ const Dashboard: React.FC = () => {
         setOrders(orderRes || []);
         setOrdersCount((orderRes || []).length || 0);
 
-        // Compute totalRevenue from completed orders (server may also provide totals,
-        // but ensure dashboard totalRevenue equals sum of orders with trạng_thái = 'hoan_tat')
+        // Compute totalRevenue from paid orders (server may also provide totals,
+        // but ensure dashboard totalRevenue equals sum of orders with trạng_thái = 'da_thanh_toan')
         try {
           const completedRevenue = (orderRes || []).reduce((sum: number, o: any) => {
             const status = o.trang_thai || o.trangThai || o.status;
             const amount = Number(o.tong_tien || o.tongTien || o.total || 0) || 0;
-            return sum + ((status === 'hoan_tat') ? amount : 0);
+            return sum + ((status === 'da_thanh_toan') ? amount : 0);
           }, 0);
           setTotalRevenue(completedRevenue);
 
@@ -143,7 +143,7 @@ const Dashboard: React.FC = () => {
           <div className="bg-white p-6 rounded-xl shadow-sm border border-border hover:shadow-md transition-all">
             <h2 className="font-semibold text-gray-800 mb-2">Doanh thu</h2>
             <p className="text-3xl font-bold text-green-600">{formatVND(totalRevenue)}</p>
-            <p className="text-sm text-gray-500 mt-1">Tổng doanh thu số đơn hàng đã hoàn tất</p>
+            <p className="text-sm text-gray-500 mt-1">Tổng doanh thu từ đơn hàng đã thanh toán</p>
           </div>
 
           {/* ⭐ NEW: Tổng tồn kho */}

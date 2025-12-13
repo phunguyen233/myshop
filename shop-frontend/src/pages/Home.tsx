@@ -66,19 +66,11 @@ export default function Home() {
         alert('Sản phẩm hiện không có sẵn để đặt (đang ẩn).');
         return;
       }
-      if ((product.so_luong_ton || 0) <= 0) {
-        alert('Sản phẩm hiện đang hết hàng');
-        return;
-      }
       const raw = localStorage.getItem("cart");
       const cart: Array<any> = raw ? JSON.parse(raw) : [];
       const existing = cart.find((c) => c.id === product.id);
       if (existing) {
         const nextQty = (existing.quantity || 1) + 1;
-        if (nextQty > (product.so_luong_ton || 0)) {
-          alert('Không thể thêm nữa, số lượng vượt quá tồn kho');
-          return;
-        }
         existing.quantity = nextQty;
       } else {
         cart.push({ ...product, quantity: 1 });

@@ -16,6 +16,8 @@ export default function OrderHistory() {
   const statusLabel = (s: string | undefined) => {
     if (!s) return 'Chờ xử lý';
     if (s === 'cho_xu_ly') return 'Chờ xử lý';
+    if (s === 'da_thanh_toan') return 'Đã thanh toán';
+    if (s === 'dang_giao') return 'Đang giao';
     if (s === 'hoan_tat') return 'Hoàn thành';
     if (s === 'huy') return 'Đã hủy';
     return s;
@@ -23,8 +25,11 @@ export default function OrderHistory() {
 
   const badgeClassFor = (s: string | undefined) => {
     if (!s || s === 'cho_xu_ly') return 'bg-gray-100 text-gray-800';
-    if (s === 'hoan_tat') return 'bg-green-100 text-green-800';
-    return 'bg-red-100 text-red-800';
+    if (s === 'da_thanh_toan') return 'bg-green-100 text-green-800';
+    if (s === 'dang_giao') return 'bg-yellow-100 text-yellow-800';
+    if (s === 'hoan_tat') return 'bg-emerald-100 text-emerald-800';
+    if (s === 'huy') return 'bg-red-100 text-red-800';
+    return 'bg-gray-100 text-gray-800';
   };
 
   const fetchOrders = async () => {

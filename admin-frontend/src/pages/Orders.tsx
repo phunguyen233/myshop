@@ -7,7 +7,7 @@ const Orders: React.FC = () => {
     const [orders, setOrders] = useState<Order[]>([]);
     const [loading, setLoading] = useState(false);
     const [query, setQuery] = useState("");
-    const [selectedStatus, setSelectedStatus] = useState<'all' | 'cho_xu_ly' | 'hoan_tat' | 'huy'>('all');
+    const [selectedStatus, setSelectedStatus] = useState<'all' | 'cho_xu_ly' | 'da_thanh_toan' | 'dang_giao' | 'hoan_tat' | 'huy'>('all');
     const [detail, setDetail] = useState<Order | null>(null);
     const [newStatus, setNewStatus] = useState<string>("");
     const [showAddModal, setShowAddModal] = useState(false);
@@ -22,10 +22,12 @@ const Orders: React.FC = () => {
     const [orderItems, setOrderItems] = useState<Array<{ ma_san_pham: number; ten_san_pham?: string; so_luong: number; don_gia: number }>>([]);
     const [orderFieldErrors, setOrderFieldErrors] = useState<{ customer?: string; items?: string; name?: string; phone?: string; address?: string }>({});
 
-    // Use enum values from your DB: 'cho_xu_ly','hoan_tat','huy'
-    const statuses = ["cho_xu_ly", "hoan_tat", "huy"];
+    // Use enum values from your DB: 'cho_xu_ly','da_thanh_toan','dang_giao','hoan_tat','huy'
+    const statuses = ["cho_xu_ly", "da_thanh_toan", "dang_giao", "hoan_tat", "huy"];
     const statusLabels: Record<string, string> = {
         cho_xu_ly: "Chờ xử lý",
+        da_thanh_toan: "Đã thanh toán",
+        dang_giao: "Đang giao",
         hoan_tat: "Hoàn thành",
         huy: "Đã hủy",
     };
@@ -153,23 +155,36 @@ const Orders: React.FC = () => {
         if (!detail?.ma_don_hang) return;
         try {
             const previousStatus = detail.trang_thai;
-            await orderAPI.updateStatus(detail.ma_don_hang, newStatus);
-            alert('Cập nhật trạng thái thành công');
+            const resp: any = await orderAPI.updateStatus(detail.ma_don_hang, newStatus);
+            alert(resp?.message || 'Cập nhật trạng thái thành công');
             // refresh list and detail
             fetchOrders();
             const updated = await orderAPI.getById(detail.ma_don_hang);
             setDetail(updated);
-            // If order moved into 'hoan_tat' and previously wasn't, dispatch increment event with amount
+            // If the backend returned deductions, notify Ingredients page to refresh and show summary
             try {
-                if (previousStatus !== 'hoan_tat' && newStatus === 'hoan_tat') {
+                if (resp?.deductions && Array.isArray(resp.deductions) && resp.deductions.length > 0) {
+                    // dispatch a global event so Ingredients page can refresh
+                    window.dispatchEvent(new CustomEvent('ingredientsUpdated', { detail: { deductions: resp.deductions } }));
+                    // build a short summary for the admin
+                    const lines = resp.deductions.map((d: any) => {
+                        const name = d.ten_nguyen_lieu || d.ma_nguyen_lieu;
+                        const before = Number(d.before || 0);
+                        const after = Number(d.after || 0);
+                        const unit = d.don_vi || '';
+                        return `${name}: ${before}${unit} → ${after}${unit}`;
+                    });
+                    alert('Đã trừ nguyên liệu theo công thức:\n' + lines.join('\n'));
+                }
+
+                // revenue/stat updates
+                if (previousStatus !== 'da_thanh_toan' && newStatus === 'da_thanh_toan') {
                     const amount = Number(updated.tong_tien || 0);
                     window.dispatchEvent(new CustomEvent('statsUpdated', { detail: { orderCompletedAmount: amount } }));
-                } else if (previousStatus === 'hoan_tat' && newStatus !== 'hoan_tat') {
-                    // order was un-marked as completed: decrease revenue
+                } else if (previousStatus === 'da_thanh_toan' && newStatus !== 'da_thanh_toan') {
                     const amount = Number(updated.tong_tien || 0);
                     window.dispatchEvent(new CustomEvent('statsUpdated', { detail: { orderRevertedAmount: amount } }));
                 } else {
-                    // generic update
                     window.dispatchEvent(new Event('statsUpdated'));
                 }
             } catch (e) { /* ignore */ }
@@ -214,7 +229,9 @@ const Orders: React.FC = () => {
             <div className="mt-3">
                 <div className="flex gap-2 items-center">
                     <button onClick={() => setSelectedStatus('all')} className={`px-3 py-1 rounded border ${selectedStatus === 'all' ? 'bg-gray-300 text-gray-900' : 'bg-white text-gray-800'}`}>Tất cả</button>
-                    <button onClick={() => setSelectedStatus('hoan_tat')} className={`px-3 py-1 rounded border ${selectedStatus === 'hoan_tat' ? 'bg-gray-300 text-gray-900' : 'bg-white text-gray-800'}`}>Đã hoàn thành</button>
+                    <button onClick={() => setSelectedStatus('da_thanh_toan')} className={`px-3 py-1 rounded border ${selectedStatus === 'da_thanh_toan' ? 'bg-gray-300 text-gray-900' : 'bg-white text-gray-800'}`}>Đã thanh toán</button>
+                    <button onClick={() => setSelectedStatus('dang_giao')} className={`px-3 py-1 rounded border ${selectedStatus === 'dang_giao' ? 'bg-gray-300 text-gray-900' : 'bg-white text-gray-800'}`}>Đang giao</button>
+                    <button onClick={() => setSelectedStatus('hoan_tat')} className={`px-3 py-1 rounded border ${selectedStatus === 'hoan_tat' ? 'bg-gray-300 text-gray-900' : 'bg-white text-gray-800'}`}>Hoàn thành</button>
                     <button onClick={() => setSelectedStatus('huy')} className={`px-3 py-1 rounded border ${selectedStatus === 'huy' ? 'bg-gray-300 text-gray-900' : 'bg-white text-gray-800'}`}>Đã hủy</button>
                     <button onClick={() => setSelectedStatus('cho_xu_ly')} className={`px-3 py-1 rounded border ${selectedStatus === 'cho_xu_ly' ? 'bg-gray-300 text-gray-900' : 'bg-white text-gray-800'}`}>Chờ xử lý</button>
                 </div>
@@ -252,6 +269,10 @@ const Orders: React.FC = () => {
                                         <td className="p-4 text-foreground">
                                             {o.trang_thai === 'hoan_tat' ? (
                                                 <span className="inline-block px-2 py-1 rounded-full bg-green-600 text-white text-sm font-semibold">Hoàn thành</span>
+                                            ) : o.trang_thai === 'da_thanh_toan' ? (
+                                                <span className="inline-block px-2 py-1 rounded-full bg-emerald-600 text-white text-sm font-semibold">Đã thanh toán</span>
+                                            ) : o.trang_thai === 'dang_giao' ? (
+                                                <span className="inline-block px-2 py-1 rounded-full bg-yellow-500 text-white text-sm font-semibold">Đang giao</span>
                                             ) : o.trang_thai === 'huy' ? (
                                                 <span className="inline-block px-2 py-1 rounded-full bg-red-600 text-white text-sm font-semibold">Đã hủy</span>
                                             ) : (
