@@ -68,6 +68,24 @@ export const addOrder = async (req, res) => {
     // Chèn chi tiết đơn vào `chitiet_donhang`.
     // Ghi nhận tồn kho trước khi chèn chi tiết để phát hiện và trung hòa những thay đổi tự động do trigger DB (nếu có)
     const beforeStockMap = {};
+    // Also capture ingredient stocks for ingredients used by the ordered products to detect unintended deductions
+    const involvedNguyenLieu = new Set();
+    for (const ct of chi_tiet) {
+      const [recipeLines] = await db.query(
+        "SELECT ma_nguyen_lieu FROM congthuc_sanpham WHERE ma_san_pham = ?",
+        [ct.ma_san_pham]
+      );
+      for (const rl of recipeLines) {
+        if (rl.ma_nguyen_lieu) involvedNguyenLieu.add(rl.ma_nguyen_lieu);
+      }
+    }
+    const beforeNgMap = {};
+    if (involvedNguyenLieu.size > 0) {
+      const ids = Array.from(involvedNguyenLieu);
+      const placeholders = ids.map(() => '?').join(',');
+      const [ngRows] = await db.query(`SELECT ma_nguyen_lieu, so_luong_ton FROM nguyenlieu WHERE ma_nguyen_lieu IN (${placeholders})`, ids);
+      for (const r of ngRows) beforeNgMap[r.ma_nguyen_lieu] = Number(r.so_luong_ton || 0);
+    }
     for (const ct of chi_tiet) {
       if (beforeStockMap[ct.ma_san_pham] === undefined) {
         const [[row]] = await db.query("SELECT so_luong_ton FROM sanpham WHERE ma_san_pham = ?", [ct.ma_san_pham]);
@@ -96,6 +114,29 @@ export const addOrder = async (req, res) => {
       }
     } catch (e) {
       console.error('Cảnh báo: không thể trung hòa thay đổi tồn kho tự động sau khi tạo đơn', e);
+    }
+
+    // After inserting details, detect if any ingredient stocks were reduced by DB triggers and restore them.
+    try {
+      if (involvedNguyenLieu.size > 0) {
+        const ids = Array.from(involvedNguyenLieu);
+        const placeholders = ids.map(() => '?').join(',');
+        const [afterNgRows] = await db.query(`SELECT ma_nguyen_lieu, so_luong_ton FROM nguyenlieu WHERE ma_nguyen_lieu IN (${placeholders})`, ids);
+        const afterNgMap = {};
+        for (const r of afterNgRows) afterNgMap[r.ma_nguyen_lieu] = Number(r.so_luong_ton || 0);
+
+        for (const idNl of ids) {
+          const beforeVal = Number(beforeNgMap[idNl] || 0);
+          const afterVal = Number(afterNgMap[idNl] || 0);
+          if (afterVal < beforeVal) {
+            const diff = beforeVal - afterVal;
+            // restore the deducted amount
+            await db.query("UPDATE nguyenlieu SET so_luong_ton = so_luong_ton + ? WHERE ma_nguyen_lieu = ?", [diff, idNl]);
+          }
+        }
+      }
+    } catch (e) {
+      console.error('Cảnh báo: không thể phục hồi nguyên liệu bị trừ tự động sau khi tạo đơn', e);
     }
 
     // KHÔNG thay đổi tồn kho khi tạo đơn.
