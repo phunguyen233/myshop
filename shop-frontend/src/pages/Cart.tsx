@@ -84,6 +84,7 @@ export default function Cart() {
         `${API}/orders`,
         {
           ma_khach_hang,
+          trang_thai: 'cho_xu_ly',
           tong_tien: total,
           chi_tiet,
           ten_nguoi_nhan: checkoutName,

@@ -58,9 +58,10 @@ export const addOrder = async (req, res) => {
     }
 
     // Chèn bản ghi vào `donhang` kèm thông tin người nhận
+    // Đặt `trang_thai` mặc định là 'cho_xu_ly' để chắc chắn tạo đơn không gây trừ nguyên liệu
     const [order] = await db.query(
-      "INSERT INTO donhang (ma_khach_hang, ten_nguoi_nhan, so_dien_thoai_nhan, dia_chi_nhan, tong_tien, thoi_gian_mua) VALUES (?, ?, ?, ?, ?, NOW())",
-      [final_ma_khach_hang, ten_nguoi_nhan || null, so_dien_thoai_nhan || null, dia_chi_nhan || null, tong_tien]
+      "INSERT INTO donhang (ma_khach_hang, ten_nguoi_nhan, so_dien_thoai_nhan, dia_chi_nhan, tong_tien, trang_thai, thoi_gian_mua) VALUES (?, ?, ?, ?, ?, ?, NOW())",
+      [final_ma_khach_hang, ten_nguoi_nhan || null, so_dien_thoai_nhan || null, dia_chi_nhan || null, tong_tien, 'cho_xu_ly']
     );
     const ma_don_hang = order.insertId;
 
