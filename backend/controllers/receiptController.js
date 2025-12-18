@@ -132,7 +132,6 @@ export const updateReceipt = async (req, res) => {
       }
 
       // compute new don_gia based on master total price/qty
-      const toNumber = v => Number(v) || 0;
       const masterTotalQty = toNumber(nlRows[0]?.master_total_qty);
       const masterTotalPrice = toNumber(nlRows[0]?.master_total_price);
       let totalCost = 0;
