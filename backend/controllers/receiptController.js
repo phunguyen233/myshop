@@ -81,3 +81,116 @@ export const getReceiptsByIngredient = async (req, res) => {
     res.status(500).json({ message: "Lỗi khi lấy phiếu nhập" });
   }
 };
+
+export const updateReceipt = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { so_luong_nhap, don_vi_id, don_gia } = req.body;
+    const connection = await db.getConnection();
+    try {
+      await connection.beginTransaction();
+
+      const [[existing]] = await connection.query("SELECT * FROM nhapkho_nguyenlieu WHERE id = ?", [id]);
+      if (!existing) return res.status(404).json({ message: 'Phiếu nhập không tồn tại' });
+
+      const ma_nguyen_lieu = existing.ma_nguyen_lieu;
+
+      // get unit conversion info for stored unit and for old/new incoming units
+      const [nlRows] = await connection.query(
+        `SELECT nl.don_vi_id AS nl_don_vi_id, d.he_so_quy_doi AS nl_he_so, dold.he_so_quy_doi AS old_incoming_he_so, dnew.he_so_quy_doi AS new_incoming_he_so
+         FROM nguyenlieu nl
+         LEFT JOIN donvi d ON nl.don_vi_id = d.id
+         LEFT JOIN donvi dold ON dold.id = ?
+         LEFT JOIN donvi dnew ON dnew.id = ?
+         WHERE nl.ma_nguyen_lieu = ?`,
+        [existing.don_vi_id, don_vi_id, ma_nguyen_lieu]
+      );
+
+      const info = nlRows && nlRows[0] ? nlRows[0] : null;
+
+      const toNumber = v => Number(v) || 0;
+      // convert old incoming -> stored
+      let oldConverted = toNumber(existing.so_luong_nhap);
+      if (info && info.nl_he_so && info.old_incoming_he_so) {
+        oldConverted = (toNumber(existing.so_luong_nhap) * toNumber(info.old_incoming_he_so)) / toNumber(info.nl_he_so);
+      }
+      // convert new incoming -> stored
+      let newConverted = toNumber(so_luong_nhap);
+      if (info && info.nl_he_so && info.new_incoming_he_so) {
+        newConverted = (toNumber(so_luong_nhap) * toNumber(info.new_incoming_he_so)) / toNumber(info.nl_he_so);
+      }
+
+      const diff = newConverted - oldConverted;
+
+      // update stock
+      if (diff !== 0) {
+        await connection.query("UPDATE nguyenlieu SET so_luong_ton = so_luong_ton + ? WHERE ma_nguyen_lieu = ?", [diff, ma_nguyen_lieu]);
+        await connection.query("INSERT INTO lichsu_tonkho (ma_san_pham, so_luong_thay_doi, ly_do, ngay_thay_doi) VALUES (?, ?, ?, NOW())", [ma_nguyen_lieu, diff, `Cập nhật phiếu nhập (#${id})`]);
+      }
+
+      // update receipt row
+      await connection.query("UPDATE nhapkho_nguyenlieu SET so_luong_nhap = ?, don_vi_id = ?, don_gia = ? WHERE id = ?", [so_luong_nhap, don_vi_id, don_gia || 0, id]);
+
+      await connection.commit();
+      res.json({ message: 'Cập nhật phiếu nhập thành công' });
+    } catch (e) {
+      await connection.rollback();
+      console.error(e);
+      res.status(500).json({ message: 'Lỗi khi cập nhật phiếu nhập' });
+    } finally {
+      connection.release();
+    }
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Lỗi server' });
+  }
+};
+
+export const deleteReceipt = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const connection = await db.getConnection();
+    try {
+      await connection.beginTransaction();
+      const [[existing]] = await connection.query("SELECT * FROM nhapkho_nguyenlieu WHERE id = ?", [id]);
+      if (!existing) return res.status(404).json({ message: 'Phiếu nhập không tồn tại' });
+
+      const ma_nguyen_lieu = existing.ma_nguyen_lieu;
+
+      // get conversion info to compute stored qty
+      const [nlRows] = await connection.query(
+        `SELECT d.he_so_quy_doi AS nl_he_so, din.he_so_quy_doi AS incoming_he_so
+         FROM nguyenlieu nl
+         LEFT JOIN donvi d ON nl.don_vi_id = d.id
+         LEFT JOIN donvi din ON din.id = ?
+         WHERE nl.ma_nguyen_lieu = ?`,
+        [existing.don_vi_id, ma_nguyen_lieu]
+      );
+      const info = nlRows && nlRows[0] ? nlRows[0] : null;
+      const toNumber = v => Number(v) || 0;
+      let converted = toNumber(existing.so_luong_nhap);
+      if (info && info.nl_he_so && info.incoming_he_so) {
+        converted = (toNumber(existing.so_luong_nhap) * toNumber(info.incoming_he_so)) / toNumber(info.nl_he_so);
+      }
+
+      // subtract from stock
+      await connection.query("UPDATE nguyenlieu SET so_luong_ton = so_luong_ton - ? WHERE ma_nguyen_lieu = ?", [converted, ma_nguyen_lieu]);
+      await connection.query("INSERT INTO lichsu_tonkho (ma_san_pham, so_luong_thay_doi, ly_do, ngay_thay_doi) VALUES (?, ?, ?, NOW())", [ma_nguyen_lieu, -converted, `Xóa phiếu nhập (#${id})`]);
+
+      // delete receipt
+      await connection.query("DELETE FROM nhapkho_nguyenlieu WHERE id = ?", [id]);
+
+      await connection.commit();
+      res.json({ message: 'Xóa phiếu nhập thành công' });
+    } catch (e) {
+      await connection.rollback();
+      console.error(e);
+      res.status(500).json({ message: 'Lỗi khi xóa phiếu nhập' });
+    } finally {
+      connection.release();
+    }
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Lỗi server' });
+  }
+};
