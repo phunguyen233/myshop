@@ -45,6 +45,16 @@ export const addReceipt = async (req, res) => {
         [ma_nguyen_lieu, converted, `Nhập kho nguyên liệu (phiếu ${ins.insertId})`]
       );
 
+      // Cập nhật giá nhập của nguyên liệu: cộng tổng tiền nhập (số lượng quy đổi * đơn giá quy đổi về đơn vị lưu trữ)
+      let unitPricePerStored = Number(don_gia) || 0;
+      if (info && info.nl_he_so && info.incoming_he_so) {
+        const nl_he_so = Number(info.nl_he_so) || 1;
+        const incoming_he_so = Number(info.incoming_he_so) || 1;
+        unitPricePerStored = (Number(don_gia) * incoming_he_so) / nl_he_so;
+      }
+      const totalCost = unitPricePerStored * Number(converted || 0);
+      await connection.query("UPDATE nguyenlieu SET gia_nhap = gia_nhap + ? WHERE ma_nguyen_lieu = ?", [totalCost, ma_nguyen_lieu]);
+
       await connection.commit();
       res.status(201).json({ message: "Nhập kho nguyên liệu thành công", id: ins.insertId });
     } catch (e) {

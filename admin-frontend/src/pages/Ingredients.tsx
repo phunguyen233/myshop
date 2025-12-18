@@ -15,6 +15,10 @@ const Ingredients: React.FC = () => {
   const [receiptLoading, setReceiptLoading] = useState(false);
   const [receiptError, setReceiptError] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showReceiptModal, setShowReceiptModal] = useState(false);
+  const [search, setSearch] = useState("");
 
   useEffect(() => {
     const fetch = async () => {
@@ -84,7 +88,7 @@ const Ingredients: React.FC = () => {
   const handleEdit = (item: any) => {
     setEditingId(item.ma_nguyen_lieu);
     setForm({ ten_nguyen_lieu: item.ten_nguyen_lieu, so_luong_ton: item.so_luong_ton || 0, don_vi_id: item.don_vi_id || 0, gia_nhap: item.gia_nhap || 0 });
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    setShowEditModal(true);
   };
 
   const handleDelete = async (id: number) => {
@@ -126,9 +130,12 @@ const Ingredients: React.FC = () => {
         don_vi_id: receipt.don_vi_id, 
         don_gia: receipt.don_gia 
       });
+      // Backend now updates ingredient stock and `gia_nhap` on receipt; just refresh list
+
       const list = await ingredientAPI.getAll();
       setItems(list);
       setReceipt({ ma_nguyen_lieu: 0, so_luong_nhap: 0, don_vi_id: 0, don_gia: 0 });
+      setShowReceiptModal(false);
       setSuccessMsg("Nhập kho nguyên liệu thành công!");
       setTimeout(() => setSuccessMsg(""), 3000);
     } catch (err: any) {
@@ -137,6 +144,17 @@ const Ingredients: React.FC = () => {
     } finally {
       setReceiptLoading(false);
     }
+  };
+
+  const openAddModal = () => {
+    setForm({ ten_nguyen_lieu: "", so_luong_ton: 0, don_vi_id: 0, gia_nhap: 0 });
+    setEditingId(null);
+    setShowAddModal(true);
+  };
+
+  const openReceiptModalFor = (item: any) => {
+    setReceipt({ ma_nguyen_lieu: item.ma_nguyen_lieu, so_luong_nhap: 0, don_vi_id: item.don_vi_id || 0, don_gia: 0 });
+    setShowReceiptModal(true);
   };
 
   // compute converted preview for receipt: show how much will be added in the ingredient's stored unit
@@ -182,147 +200,19 @@ const Ingredients: React.FC = () => {
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="bg-card p-4 rounded border border-border">
-          <h3 className="font-semibold mb-4 text-lg">Thêm nguyên liệu</h3>
-
-          {addError && (
-            <div className="bg-red-100 border border-red-400 text-red-700 px-3 py-2 rounded mb-3 text-sm">
-              {addError}
-            </div>
-          )}
-
-          <div className="space-y-3">
-            <div>
-              <label className="block text-sm font-medium mb-1">Tên nguyên liệu</label>
-              <input 
-                type="text"
-                className="w-full border border-input rounded px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none" 
-                placeholder="Vd: Bột mì, Đường, Sữa..." 
-                value={form.ten_nguyen_lieu} 
-                onChange={e => setForm({ ...form, ten_nguyen_lieu: e.target.value })} 
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <label className="block text-sm font-medium mb-1">Số lượng ban đầu</label>
-                <input 
-                  type="number" 
-                  className="w-full border border-input rounded px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                  min="0"
-                  value={form.so_luong_ton} 
-                  onChange={e => setForm({ ...form, so_luong_ton: Number(e.target.value) })} 
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">Đơn vị</label>
-                <select 
-                  className="w-full border border-input rounded px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                  value={form.don_vi_id} 
-                  onChange={e => setForm({ ...form, don_vi_id: Number(e.target.value) })}
-                >
-                  <option value={0}>Chọn đơn vị</option>
-                  {units.map(u => <option key={u.id} value={u.id}>{u.ten}</option>)}
-                </select>
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-1">Giá nhập (VNĐ)</label>
-              <input 
-                type="number" 
-                className="w-full border border-input rounded px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                min="0"
-                step="0.01"
-                placeholder="0" 
-                value={form.gia_nhap} 
-                onChange={e => setForm({ ...form, gia_nhap: Number(e.target.value) })} 
-              />
-            </div>
-
-            <button 
-              onClick={handleAdd} 
-              disabled={addLoading}
-              className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white px-4 py-2 rounded font-medium transition"
-            >
-              {addLoading ? "Đang lưu..." : "Thêm nguyên liệu"}
-            </button>
-          </div>
+      <div className="flex items-center justify-between w-full">
+        <div className="flex items-center gap-2">
+          <input
+            type="text"
+            placeholder="Tìm kiếm theo tên, mã..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-64 border border-input bg-background text-foreground rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-600"
+          />
+          <button onClick={() => {}} className="bg-gray-200 text-gray-800 hover:bg-gray-300 px-3 py-2 rounded-lg transition">Tìm</button>
         </div>
-
-        <div className="bg-card p-4 rounded border border-border">
-          <h3 className="font-semibold mb-4 text-lg">Nhập kho nguyên liệu</h3>
-
-          {receiptError && (
-            <div className="bg-red-100 border border-red-400 text-red-700 px-3 py-2 rounded mb-3 text-sm">
-              {receiptError}
-            </div>
-          )}
-
-          <div className="space-y-3">
-            <div>
-              <label className="block text-sm font-medium mb-1">Chọn nguyên liệu</label>
-              <select 
-                className="w-full border border-input rounded px-3 py-2 text-sm focus:ring-2 focus:ring-green-500 focus:outline-none"
-                value={receipt.ma_nguyen_lieu} 
-                onChange={e => setReceipt({ ...receipt, ma_nguyen_lieu: Number(e.target.value) })}
-              >
-                <option value={0}>-- Chọn nguyên liệu --</option>
-                {items.map(i => <option key={i.ma_nguyen_lieu} value={i.ma_nguyen_lieu}>{i.ten_nguyen_lieu}</option>)}
-              </select>
-            </div>
-
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <label className="block text-sm font-medium mb-1">Số lượng nhập</label>
-                <input 
-                  type="number" 
-                  className="w-full border border-input rounded px-3 py-2 text-sm focus:ring-2 focus:ring-green-500 focus:outline-none"
-                  min="0"
-                  step="0.01"
-                  value={receipt.so_luong_nhap} 
-                  onChange={e => setReceipt({ ...receipt, so_luong_nhap: Number(e.target.value) })} 
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">Đơn vị</label>
-                <select 
-                  className="w-full border border-input rounded px-3 py-2 text-sm focus:ring-2 focus:ring-green-500 focus:outline-none"
-                  value={receipt.don_vi_id} 
-                  onChange={e => setReceipt({ ...receipt, don_vi_id: Number(e.target.value) })}
-                >
-                  <option value={0}>Đơn vị</option>
-                  {units.map(u => <option key={u.id} value={u.id}>{u.ten}</option>)}
-                </select>
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-1">Đơn giá (VNĐ)</label>
-              <input 
-                type="number" 
-                className="w-full border border-input rounded px-3 py-2 text-sm focus:ring-2 focus:ring-green-500 focus:outline-none"
-                min="0"
-                step="0.01"
-                placeholder="0" 
-                value={receipt.don_gia} 
-                onChange={e => setReceipt({ ...receipt, don_gia: Number(e.target.value) })} 
-              />
-            </div>
-
-            <button 
-              onClick={handleReceipt} 
-              disabled={receiptLoading}
-              className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white px-4 py-2 rounded font-medium transition"
-            >
-              {receiptLoading ? "Đang nhập..." : "Nhập kho"}
-            </button>
-            {/* Preview of converted quantity (before submit) */}
-            {getReceiptPreview() && (
-              <div className="mt-2 text-sm text-muted-foreground">Sẽ cộng: {getReceiptPreview()}</div>
-            )}
-          </div>
+        <div>
+          <button onClick={openAddModal} className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg font-semibold transition shadow-sm">Thêm nguyên liệu</button>
         </div>
       </div>
 
@@ -341,14 +231,14 @@ const Ingredients: React.FC = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {items.length === 0 ? (
+              {items.filter(i => !search || i.ten_nguyen_lieu.toLowerCase().includes(search.toLowerCase())).length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="p-4 text-center text-muted-foreground">
+                  <td colSpan={6} className="p-4 text-center text-muted-foreground">
                     Chưa có nguyên liệu nào
                   </td>
                 </tr>
                 ) : (
-                items.map(i => (
+                items.filter(i => !search || i.ten_nguyen_lieu.toLowerCase().includes(search.toLowerCase())).map(i => (
                   <tr key={i.ma_nguyen_lieu} className="hover:bg-muted/50 transition-colors">
                     <td className="p-3 text-foreground">{i.ma_nguyen_lieu}</td>
                     <td className="p-3 text-foreground font-medium">{i.ten_nguyen_lieu}</td>
@@ -359,6 +249,7 @@ const Ingredients: React.FC = () => {
                       <div className="flex items-center justify-center gap-2">
                         <button onClick={() => handleEdit(i)} className="px-3 py-1 rounded bg-white border border-border hover:bg-green-600 hover:text-white text-foreground text-xs">Sửa</button>
                         <button onClick={() => handleDelete(i.ma_nguyen_lieu)} className="px-3 py-1 rounded bg-white border border-border hover:bg-red-600 hover:text-white text-foreground text-xs">Xóa</button>
+                        <button onClick={() => openReceiptModalFor(i)} className="px-3 py-1 rounded bg-white border border-border hover:bg-indigo-600 hover:text-white text-foreground text-xs">Nhập kho</button>
                       </div>
                     </td>
                   </tr>
@@ -368,6 +259,124 @@ const Ingredients: React.FC = () => {
           </table>
         </div>
       </div>
+
+      {/* Add Modal */}
+      {showAddModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/40" onClick={() => setShowAddModal(false)} />
+          <div className="bg-white rounded shadow-lg p-6 z-10 w-full max-w-md">
+            <h3 className="text-lg font-semibold mb-4">Thêm nguyên liệu</h3>
+            {addError && <div className="bg-red-100 border border-red-400 text-red-700 px-3 py-2 rounded mb-3 text-sm">{addError}</div>}
+            <div className="space-y-3">
+              <div>
+                <label className="block text-sm font-medium mb-1">Tên nguyên liệu</label>
+                <input value={form.ten_nguyen_lieu} onChange={e => setForm({ ...form, ten_nguyen_lieu: e.target.value })} className="w-full border border-input rounded px-3 py-2 text-sm" />
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-sm font-medium mb-1">Số lượng ban đầu</label>
+                  <input type="number" min={0} value={form.so_luong_ton} onChange={e => setForm({ ...form, so_luong_ton: Number(e.target.value) })} className="w-full border border-input rounded px-3 py-2 text-sm" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Đơn vị</label>
+                  <select value={form.don_vi_id} onChange={e => setForm({ ...form, don_vi_id: Number(e.target.value) })} className="w-full border border-input rounded px-3 py-2 text-sm">
+                    <option value={0}>Chọn đơn vị</option>
+                    {units.map(u => <option key={u.id} value={u.id}>{u.ten}</option>)}
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Giá nhập (VNĐ)</label>
+                <input type="number" min={0} step="0.01" value={form.gia_nhap} onChange={e => setForm({ ...form, gia_nhap: Number(e.target.value) })} className="w-full border border-input rounded px-3 py-2 text-sm" />
+              </div>
+              <div className="flex gap-2 justify-end">
+                <button className="px-4 py-2 rounded border" onClick={() => setShowAddModal(false)}>Hủy</button>
+                <button onClick={async () => { await handleAdd(); setShowAddModal(false); }} className="px-4 py-2 rounded bg-blue-600 text-white">Lưu</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Modal */}
+      {showEditModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/40" onClick={() => setShowEditModal(false)} />
+          <div className="bg-white rounded shadow-lg p-6 z-10 w-full max-w-md">
+            <h3 className="text-lg font-semibold mb-4">Sửa nguyên liệu</h3>
+            {addError && <div className="bg-red-100 border border-red-400 text-red-700 px-3 py-2 rounded mb-3 text-sm">{addError}</div>}
+            <div className="space-y-3">
+              <div>
+                <label className="block text-sm font-medium mb-1">Tên nguyên liệu</label>
+                <input value={form.ten_nguyen_lieu} onChange={e => setForm({ ...form, ten_nguyen_lieu: e.target.value })} className="w-full border border-input rounded px-3 py-2 text-sm" />
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-sm font-medium mb-1">Số lượng</label>
+                  <input type="number" min={0} value={form.so_luong_ton} onChange={e => setForm({ ...form, so_luong_ton: Number(e.target.value) })} className="w-full border border-input rounded px-3 py-2 text-sm" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Đơn vị</label>
+                  <select value={form.don_vi_id} onChange={e => setForm({ ...form, don_vi_id: Number(e.target.value) })} className="w-full border border-input rounded px-3 py-2 text-sm">
+                    <option value={0}>Chọn đơn vị</option>
+                    {units.map(u => <option key={u.id} value={u.id}>{u.ten}</option>)}
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Giá nhập (VNĐ)</label>
+                <input type="number" min={0} step="0.01" value={form.gia_nhap} onChange={e => setForm({ ...form, gia_nhap: Number(e.target.value) })} className="w-full border border-input rounded px-3 py-2 text-sm" />
+              </div>
+              <div className="flex gap-2 justify-end">
+                <button className="px-4 py-2 rounded border" onClick={() => setShowEditModal(false)}>Hủy</button>
+                <button onClick={async () => { await handleAdd(); setShowEditModal(false); }} className="px-4 py-2 rounded bg-blue-600 text-white">Lưu</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Receipt Modal */}
+      {showReceiptModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/40" onClick={() => setShowReceiptModal(false)} />
+          <div className="bg-white rounded shadow-lg p-6 z-10 w-full max-w-md">
+            <h3 className="text-lg font-semibold mb-4">Nhập kho</h3>
+            {receiptError && <div className="bg-red-100 border border-red-400 text-red-700 px-3 py-2 rounded mb-3 text-sm">{receiptError}</div>}
+            <div className="space-y-3">
+              <div>
+                <label className="block text-sm font-medium mb-1">Nguyên liệu</label>
+                <select value={receipt.ma_nguyen_lieu} onChange={e => setReceipt({ ...receipt, ma_nguyen_lieu: Number(e.target.value) })} className="w-full border border-input rounded px-3 py-2 text-sm">
+                  <option value={0}>-- Chọn nguyên liệu --</option>
+                  {items.map(i => <option key={i.ma_nguyen_lieu} value={i.ma_nguyen_lieu}>{i.ten_nguyen_lieu}</option>)}
+                </select>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-sm font-medium mb-1">Số lượng nhập</label>
+                  <input type="number" min={0} step="0.01" value={receipt.so_luong_nhap} onChange={e => setReceipt({ ...receipt, so_luong_nhap: Number(e.target.value) })} className="w-full border border-input rounded px-3 py-2 text-sm" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Đơn vị</label>
+                  <select value={receipt.don_vi_id} onChange={e => setReceipt({ ...receipt, don_vi_id: Number(e.target.value) })} className="w-full border border-input rounded px-3 py-2 text-sm">
+                    <option value={0}>Đơn vị</option>
+                    {units.map(u => <option key={u.id} value={u.id}>{u.ten}</option>)}
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Đơn giá (VNĐ)</label>
+                <input type="number" min={0} step="0.01" value={receipt.don_gia} onChange={e => setReceipt({ ...receipt, don_gia: Number(e.target.value) })} className="w-full border border-input rounded px-3 py-2 text-sm" />
+              </div>
+              {getReceiptPreview() && <div className="text-sm text-muted-foreground">Sẽ cộng: {getReceiptPreview()}</div>}
+              <div className="flex gap-2 justify-end">
+                <button className="px-4 py-2 rounded border" onClick={() => setShowReceiptModal(false)}>Hủy</button>
+                <button onClick={async () => { await handleReceipt(); }} className="px-4 py-2 rounded bg-green-600 text-white">Lưu</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -3,6 +3,7 @@ import { productAPI } from "../api/productAPI";
 import { ingredientAPI } from "../api/ingredientAPI";
 import { recipeAPI } from "../api/recipeAPI";
 import { unitAPI } from "../api/unitAPI";
+import { receiptAPI } from "../api/receiptAPI";
 import axiosClient from "../api/axiosClient";
 
 const Recipes: React.FC = () => {
@@ -18,6 +19,11 @@ const Recipes: React.FC = () => {
   const [modalRows, setModalRows] = useState<Array<{ ma_nguyen_lieu:number, so_luong_can:number, don_vi_id:number }>>([]);
   const [modalSelectedProduct, setModalSelectedProduct] = useState<number | null>(null);
   const [ingredientQuery, setIngredientQuery] = useState("");
+  const [showReceiptModal, setShowReceiptModal] = useState(false);
+  const [receiptForm, setReceiptForm] = useState({ ma_nguyen_lieu: 0, so_luong_nhap: 0, don_vi_id: 0, don_gia: 0 });
+  const [receiptLoading, setReceiptLoading] = useState(false);
+  const [receiptError, setReceiptError] = useState("");
+  const [successMsg, setSuccessMsg] = useState("");
 
   useEffect(() => {
     const fetch = async () => {
@@ -52,9 +58,14 @@ const Recipes: React.FC = () => {
   const save = async () => {
     if (!selectedProduct) return alert('Chọn sản phẩm');
     try {
-      const payload = { ma_san_pham: selectedProduct, items: rows.filter(r=>r.ma_nguyen_lieu && r.so_luong_can>0) };
+      const items = rows.filter(r=>r.ma_nguyen_lieu && r.so_luong_can>0).map(r => ({
+        ...r,
+        cost_per_line: Math.round((computeLineCost(r) || 0))
+      }));
+      const total = items.reduce((s:number,it:any)=>s + (Number(it.cost_per_line)||0),0);
+      const payload = { ma_san_pham: selectedProduct, items };
       const res = await recipeAPI.create(payload);
-      alert(`Lưu thành công (chi phí nguyên liệu: ${res.total_cost || 0})`);
+      alert(`Lưu thành công (chi phí nguyên liệu: ${total.toLocaleString('vi-VN')}₫)`);
       setRows([]);
       setEditingProduct(null);
       await loadSaved();
@@ -95,12 +106,83 @@ const Recipes: React.FC = () => {
     setIngredientQuery('');
   };
 
+  const openReceiptModal = (ma_nguyen_lieu:number) => {
+    const ing = ingredients.find(i => i.ma_nguyen_lieu === ma_nguyen_lieu);
+    setReceiptForm({ ma_nguyen_lieu, so_luong_nhap: 0, don_vi_id: ing?.don_vi_id || 0, don_gia: 0 });
+    setReceiptError("");
+    setShowReceiptModal(true);
+  };
+
+  const handleReceipt = async () => {
+    setReceiptError("");
+    setSuccessMsg("");
+    const { ma_nguyen_lieu, so_luong_nhap, don_vi_id, don_gia } = receiptForm;
+    if (!ma_nguyen_lieu) return setReceiptError('Chọn nguyên liệu');
+    if (!so_luong_nhap || Number(so_luong_nhap) <= 0) return setReceiptError('Số lượng phải lớn hơn 0');
+    if (!don_vi_id) return setReceiptError('Chọn đơn vị');
+    try {
+      setReceiptLoading(true);
+      await receiptAPI.add(ma_nguyen_lieu, { so_luong_nhap, don_vi_id, don_gia });
+      // refresh ingredients and recipes since gia_nhap and so_luong_ton changed
+      const newIngr = await ingredientAPI.getAll();
+      setIngredients(newIngr || []);
+      await loadSaved();
+      setShowReceiptModal(false);
+      setSuccessMsg('Nhập kho nguyên liệu thành công');
+      setTimeout(() => setSuccessMsg(''), 3000);
+    } catch (e:any) {
+      console.error(e);
+      setReceiptError(e?.response?.data?.message || 'Lỗi khi nhập kho');
+    } finally {
+      setReceiptLoading(false);
+    }
+  };
+
+  const findUnit = (id:number) => units.find(u=>u.id===id) || null;
+
+  // convert quantity from unit `fromId` to unit `toId` using he_so_quy_doi
+  const convertQty = (qty:number, fromId:number, toId:number) => {
+    try {
+      if (fromId === toId) return qty;
+      const from = findUnit(fromId);
+      const to = findUnit(toId);
+      const fromHs = Number(from?.he_so_quy_doi) || 1;
+      const toHs = Number(to?.he_so_quy_doi) || 1;
+      // qty (in from unit) -> convert to base using fromHs, then to target using toHs
+      // consistent with other conversions in the project: converted = (qty * fromHs) / toHs
+      return (qty * fromHs) / toHs;
+    } catch (e) { return qty; }
+  };
+
+  const computeLineCost = (row:{ ma_nguyen_lieu:number, so_luong_can:number, don_vi_id:number }) => {
+    const ing = ingredients.find(i => i.ma_nguyen_lieu === row.ma_nguyen_lieu);
+    if (!ing) return 0;
+    const storedUnitId = ing.don_vi_id || 0;
+    const incomingUnitId = row.don_vi_id || 0;
+    const qty = Number(row.so_luong_can) || 0;
+    // convert recipe qty to the stored unit of the ingredient
+    const converted = convertQty(qty, incomingUnitId, storedUnitId);
+    const stockQty = Number(ing.so_luong_ton) || 0;
+    const price = Number(ing.gia_nhap) || 0;
+    if (stockQty > 0) {
+      return (converted / stockQty) * price;
+    }
+    // fallback: if stock qty unknown, try to compute per unit price using he_so_quy_doi
+    // assume price refers to 1 unit of storedUnit; then cost = converted * price
+    return converted * price;
+  };
+
   const removeModalRow = (idx:number) => setModalRows(prev => prev.filter((_,i)=>i!==idx));
   const updateModalRow = (idx:number, key:string, value:any) => { const copy = [...modalRows]; (copy[idx] as any)[key]=value; setModalRows(copy); };
 
   const saveModalRecipe = async () => {
     if (!modalSelectedProduct) return alert('Chọn sản phẩm trước khi lưu');
-    const payload = { ma_san_pham: modalSelectedProduct, items: modalRows.filter(r=>r.ma_nguyen_lieu && r.so_luong_can>0) };
+    const items = modalRows.filter(r=>r.ma_nguyen_lieu && r.so_luong_can>0).map(r=>({
+      ...r,
+      cost_per_line: Math.round((computeLineCost(r) || 0))
+    }));
+    const total = items.reduce((s:number,it:any)=>s + (Number(it.cost_per_line)||0),0);
+    const payload = { ma_san_pham: modalSelectedProduct, items };
     try {
       await recipeAPI.create(payload);
       alert('Tạo công thức thành công');
@@ -186,26 +268,27 @@ const Recipes: React.FC = () => {
                   <ul className="mt-2">
                     {info.items.map((it: any, idx: number) => (
                       <li key={idx} className="flex justify-between py-1 border-b border-border">
-                          <div>
-                            <div className="font-medium">{it.ten_nguyen_lieu}</div>
-                            <div className="text-sm text-muted-foreground">
-                              {(() => {
-                                const qty = Number(it.so_luong_can) || 0;
-                                const fmt = (v:number) => {
-                                  if (!isFinite(v)) return '0';
-                                  if (Math.abs(v - Math.round(v)) < 1e-9) return String(Math.round(v));
-                                  // remove trailing zeros
-                                  return String(v).replace(/\.?0+$/,'');
-                                };
-                                const unit = (it.recipe_don_vi || it.nguyenlieu_don_vi || '').trim();
-                                return `${fmt(qty)}${unit ? ' ' + unit : ''}`;
-                              })()}
-                            </div>
-                          </div>
-                          <div className="text-right">
-                            <div className="font-medium">{(Number(it.cost_per_line) || 0).toString()}₫</div>
-                          </div>
-                        </li>
+                              <div>
+                                <div className="font-medium">{it.ten_nguyen_lieu}</div>
+                                <div className="text-sm text-muted-foreground">
+                                  {(() => {
+                                    const qty = Number(it.so_luong_can) || 0;
+                                    const fmt = (v:number) => {
+                                      if (!isFinite(v)) return '0';
+                                      if (Math.abs(v - Math.round(v)) < 1e-9) return String(Math.round(v));
+                                      // remove trailing zeros
+                                      return String(v).replace(/\.?0+$/,'');
+                                    };
+                                    const unit = (it.recipe_don_vi || it.nguyenlieu_don_vi || '').trim();
+                                    return `${fmt(qty)}${unit ? ' ' + unit : ''}`;
+                                  })()}
+                                </div>
+                              </div>
+                              <div className="text-right flex flex-col items-end gap-2">
+                                <div className="font-medium">{(Number(it.cost_per_line) || 0).toString()}₫</div>
+                                <button onClick={() => openReceiptModal(it.ma_nguyen_lieu)} className="px-2 py-1 text-xs bg-indigo-600 text-white rounded">Nhập kho</button>
+                              </div>
+                            </li>
                     ))}
                   </ul>
                 </div>
@@ -264,6 +347,45 @@ const Recipes: React.FC = () => {
               <div className="flex justify-end gap-2">
                 <button onClick={() => setShowCreateModal(false)} className="bg-gray-300 px-3 py-2 rounded">Hủy</button>
                 <button onClick={saveModalRecipe} className="bg-green-600 text-white px-4 py-2 rounded">Lưu</button>
+              </div>
+            </div>
+          </div>
+        )}
+        {showReceiptModal && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-6">
+            <div className="bg-card text-card-foreground rounded-lg p-6 max-w-md w-full shadow-xl border border-border">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-bold">Nhập kho nguyên liệu</h3>
+                <button onClick={() => setShowReceiptModal(false)} className="text-muted-foreground">Đóng</button>
+              </div>
+              {receiptError && <div className="bg-red-100 border border-red-400 text-red-700 px-3 py-2 rounded mb-3 text-sm">{receiptError}</div>}
+              <div className="mb-3">
+                <label className="block text-sm mb-1">Nguyên liệu</label>
+                <select value={receiptForm.ma_nguyen_lieu || ''} disabled className="w-full border border-input rounded px-3 py-2">
+                  <option value="">--</option>
+                  {ingredients.map(i => <option key={i.ma_nguyen_lieu} value={i.ma_nguyen_lieu}>{i.ten_nguyen_lieu}</option>)}
+                </select>
+              </div>
+              <div className="grid grid-cols-2 gap-2 mb-3">
+                <div>
+                  <label className="block text-sm mb-1">Số lượng nhập</label>
+                  <input type="number" min={0} step="0.01" value={receiptForm.so_luong_nhap} onChange={e => setReceiptForm({ ...receiptForm, so_luong_nhap: Number(e.target.value) })} className="w-full border border-input rounded px-3 py-2" />
+                </div>
+                <div>
+                  <label className="block text-sm mb-1">Đơn vị</label>
+                  <select value={receiptForm.don_vi_id} onChange={e => setReceiptForm({ ...receiptForm, don_vi_id: Number(e.target.value) })} className="w-full border border-input rounded px-3 py-2">
+                    <option value={0}>Đơn vị</option>
+                    {units.map(u => <option key={u.id} value={u.id}>{u.ten}</option>)}
+                  </select>
+                </div>
+              </div>
+              <div className="mb-3">
+                <label className="block text-sm mb-1">Đơn giá (VNĐ)</label>
+                <input type="number" min={0} step="0.01" value={receiptForm.don_gia} onChange={e => setReceiptForm({ ...receiptForm, don_gia: Number(e.target.value) })} className="w-full border border-input rounded px-3 py-2" />
+              </div>
+              <div className="flex justify-end gap-2">
+                <button onClick={() => setShowReceiptModal(false)} className="bg-gray-300 px-3 py-2 rounded">Hủy</button>
+                <button onClick={handleReceipt} disabled={receiptLoading} className="bg-green-600 text-white px-4 py-2 rounded">{receiptLoading ? 'Đang lưu...' : 'Lưu'}</button>
               </div>
             </div>
           </div>
