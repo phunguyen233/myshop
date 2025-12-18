@@ -128,8 +128,7 @@ const Ingredients: React.FC = () => {
       setReceiptLoading(true);
       await receiptAPI.add(receipt.ma_nguyen_lieu, { 
         so_luong_nhap: receipt.so_luong_nhap, 
-        don_vi_id: receipt.don_vi_id, 
-        don_gia: receipt.don_gia 
+        don_vi_id: receipt.don_vi_id
       });
       // Backend now updates ingredient stock and `gia_nhap` on receipt; just refresh list
 
@@ -240,7 +239,7 @@ const Ingredients: React.FC = () => {
                     <th className="p-3 font-medium">Tên nguyên liệu</th>
                     <th className="p-3 font-medium text-right">Số lượng</th>
                     <th className="p-3 font-medium">Đơn vị</th>
-                    <th className="p-3 font-medium text-right">Giá/1kg</th>
+                    <th className="p-3 font-medium text-right">Giá tổng</th>
                     <th className="p-3 font-medium text-center">Hành động</th>
                   </tr>
                 </thead>
@@ -348,7 +347,7 @@ const Ingredients: React.FC = () => {
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">Giá nhập (VNĐ)</label>
+                <label className="block text-sm font-medium mb-1">Giá tổng (VNĐ) — cho số lượng đã nhập</label>
                 <input type="number" min={0} step="0.01" value={form.gia_nhap} onChange={e => setForm({ ...form, gia_nhap: Number(e.target.value) })} className="w-full border border-input rounded px-3 py-2 text-sm" />
               </div>
               <div className="flex gap-2 justify-end">
@@ -386,7 +385,7 @@ const Ingredients: React.FC = () => {
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">Giá nhập (VNĐ)</label>
+                <label className="block text-sm font-medium mb-1">Giá tổng (VNĐ) — cho số lượng hiện tại</label>
                 <input type="number" min={0} step="0.01" value={form.gia_nhap} onChange={e => setForm({ ...form, gia_nhap: Number(e.target.value) })} className="w-full border border-input rounded px-3 py-2 text-sm" />
               </div>
               <div className="flex gap-2 justify-end">
@@ -426,10 +425,7 @@ const Ingredients: React.FC = () => {
                   </select>
                 </div>
               </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">Đơn giá (VNĐ)</label>
-                <input type="number" min={0} step="0.01" value={receipt.don_gia} onChange={e => setReceipt({ ...receipt, don_gia: Number(e.target.value) })} className="w-full border border-input rounded px-3 py-2 text-sm" />
-              </div>
+              {/* Đơn giá sẽ được tính tự động theo danh sách nguyên liệu (giá/1kg) */}
               {getReceiptPreview() && <div className="text-sm text-muted-foreground">Sẽ cộng: {getReceiptPreview()}</div>}
               <div className="flex gap-2 justify-end">
                 <button className="px-4 py-2 rounded border" onClick={() => setShowReceiptModal(false)}>Hủy</button>

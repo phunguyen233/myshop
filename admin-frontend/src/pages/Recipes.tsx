@@ -122,7 +122,7 @@ const Recipes: React.FC = () => {
     if (!don_vi_id) return setReceiptError('Chọn đơn vị');
     try {
       setReceiptLoading(true);
-      await receiptAPI.add(ma_nguyen_lieu, { so_luong_nhap, don_vi_id, don_gia });
+      await receiptAPI.add(ma_nguyen_lieu, { so_luong_nhap, don_vi_id });
       // refresh ingredients and recipes since gia_nhap and so_luong_ton changed
       const newIngr = await ingredientAPI.getAll();
       setIngredients(newIngr || []);
@@ -379,10 +379,7 @@ const Recipes: React.FC = () => {
                   </select>
                 </div>
               </div>
-              <div className="mb-3">
-                <label className="block text-sm mb-1">Đơn giá (VNĐ)</label>
-                <input type="number" min={0} step="0.01" value={receiptForm.don_gia} onChange={e => setReceiptForm({ ...receiptForm, don_gia: Number(e.target.value) })} className="w-full border border-input rounded px-3 py-2" />
-              </div>
+              <div className="mb-3 text-sm text-muted-foreground">Đơn giá sẽ được tính tự động theo danh sách nguyên liệu (giá/1kg)</div>
               <div className="flex justify-end gap-2">
                 <button onClick={() => setShowReceiptModal(false)} className="bg-gray-300 px-3 py-2 rounded">Hủy</button>
                 <button onClick={handleReceipt} disabled={receiptLoading} className="bg-green-600 text-white px-4 py-2 rounded">{receiptLoading ? 'Đang lưu...' : 'Lưu'}</button>

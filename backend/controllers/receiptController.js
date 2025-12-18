@@ -10,14 +10,9 @@ export const addReceipt = async (req, res) => {
     try {
       await connection.beginTransaction();
 
-      const [ins] = await connection.query(
-        "INSERT INTO nhapkho_nguyenlieu (ma_nguyen_lieu, so_luong_nhap, don_vi_id, don_gia, ngay_nhap) VALUES (?, ?, ?, ?, NOW())",
-        [ma_nguyen_lieu, so_luong_nhap, don_vi_id, don_gia || 0]
-      );
-
-      // Lấy thông tin đơn vị lưu trữ của nguyên liệu và hệ số quy đổi
+      // Lấy thông tin đơn vị lưu trữ của nguyên liệu, hệ số quy đổi và giá tổng hiện tại trên danh sách nguyên liệu
       const [nlRows] = await connection.query(
-        `SELECT nl.don_vi_id AS nl_don_vi_id, d.he_so_quy_doi AS nl_he_so, din.he_so_quy_doi AS incoming_he_so
+        `SELECT nl.don_vi_id AS nl_don_vi_id, d.he_so_quy_doi AS nl_he_so, din.he_so_quy_doi AS incoming_he_so, nl.gia_nhap AS master_total_price, nl.so_luong_ton AS master_total_qty
          FROM nguyenlieu nl
          LEFT JOIN donvi d ON nl.don_vi_id = d.id
          LEFT JOIN donvi din ON din.id = ?
@@ -28,13 +23,32 @@ export const addReceipt = async (req, res) => {
       const info = nlRows && nlRows[0] ? nlRows[0] : null;
       // Nếu không có thông tin đơn vị, fallback: cộng trực tiếp
       let converted = Number(so_luong_nhap);
-      if (info && info.nl_he_so && info.incoming_he_so) {
-        // Chuyển số lượng nhập (theo đơn vị incoming) về đơn vị của nguyên liệu
+      const toNumber = v => Number(v) || 0;
+      const incoming_he_so = toNumber(info?.incoming_he_so);
+      if (info && info.nl_he_so != null && info.incoming_he_so != null) {
+        // Chuyển số lượng nhập (theo đơn vị incoming) về đơn vị của nguyên liệu (stored unit)
         // công thức: converted = so_luong_nhap * incoming_he_so / nl_he_so
-        const nl_he_so = Number(info.nl_he_so) || 1;
-        const incoming_he_so = Number(info.incoming_he_so) || 1;
-        converted = (Number(so_luong_nhap) * incoming_he_so) / nl_he_so;
+        const nl_he_so = toNumber(info.nl_he_so) || 1;
+        converted = (toNumber(so_luong_nhap) * incoming_he_so) / nl_he_so;
       }
+
+      // Tính tổng tiền của phiếu nhập dựa trên giá tổng ở danh sách nguyên liệu
+      // công thức: totalCost = (converted / master_total_qty) * master_total_price
+      const masterTotalQty = toNumber(info?.master_total_qty);
+      const masterTotalPrice = toNumber(info?.master_total_price);
+      let totalCost = 0;
+      if (masterTotalQty > 0) {
+        totalCost = (converted / masterTotalQty) * masterTotalPrice;
+      }
+
+      // đơn giá theo đơn vị incoming = totalCost / so_luong_nhap
+      const computedDonGia = toNumber(so_luong_nhap) > 0 ? (totalCost / toNumber(so_luong_nhap)) : 0;
+
+      // Lưu phiếu nhập với don_gia đã tính (don_gia lưu là đơn giá theo đơn vị nhập)
+      const [ins] = await connection.query(
+        "INSERT INTO nhapkho_nguyenlieu (ma_nguyen_lieu, so_luong_nhap, don_vi_id, don_gia, ngay_nhap) VALUES (?, ?, ?, ?, NOW())",
+        [ma_nguyen_lieu, so_luong_nhap, don_vi_id, computedDonGia]
+      );
 
       // Tăng tồn kho nguyên liệu bằng lượng đã quy đổi về đơn vị lưu trữ
       await connection.query("UPDATE nguyenlieu SET so_luong_ton = so_luong_ton + ? WHERE ma_nguyen_lieu = ?", [converted, ma_nguyen_lieu]);
@@ -44,17 +58,6 @@ export const addReceipt = async (req, res) => {
         "INSERT INTO lichsu_tonkho (ma_san_pham, so_luong_thay_doi, ly_do, ngay_thay_doi) VALUES (?, ?, ?, NOW())",
         [ma_nguyen_lieu, converted, `Nhập kho nguyên liệu (phiếu ${ins.insertId})`]
       );
-
-      // Lưu tổng tiền của phiếu nhập (tùy ý): tính theo đơn giá nhập được cung cấp quy đổi về đơn vị lưu trữ
-      let unitPricePerStored = Number(don_gia) || 0;
-      if (info && info.nl_he_so && info.incoming_he_so) {
-        const nl_he_so = Number(info.nl_he_so) || 1;
-        const incoming_he_so = Number(info.incoming_he_so) || 1;
-        unitPricePerStored = (Number(don_gia) * incoming_he_so) / nl_he_so;
-      }
-      const totalCost = unitPricePerStored * Number(converted || 0);
-      // NOTE: theo cơ chế mới, giá trên danh sách nguyên liệu (`nguyenlieu.gia_nhap`) là giá cố định trên 1kg
-      // nên chúng ta không cập nhật `nguyenlieu.gia_nhap` khi nhập kho. Giá nhập chi tiết được lưu trong `nhapkho_nguyenlieu.don_gia`.
 
       await connection.commit();
       res.status(201).json({ message: "Nhập kho nguyên liệu thành công", id: ins.insertId });
@@ -97,7 +100,7 @@ export const updateReceipt = async (req, res) => {
 
       // get unit conversion info for stored unit and for old/new incoming units
       const [nlRows] = await connection.query(
-        `SELECT nl.don_vi_id AS nl_don_vi_id, d.he_so_quy_doi AS nl_he_so, dold.he_so_quy_doi AS old_incoming_he_so, dnew.he_so_quy_doi AS new_incoming_he_so
+        `SELECT nl.don_vi_id AS nl_don_vi_id, d.he_so_quy_doi AS nl_he_so, dold.he_so_quy_doi AS old_incoming_he_so, dnew.he_so_quy_doi AS new_incoming_he_so, nl.gia_nhap AS master_total_price, nl.so_luong_ton AS master_total_qty
          FROM nguyenlieu nl
          LEFT JOIN donvi d ON nl.don_vi_id = d.id
          LEFT JOIN donvi dold ON dold.id = ?
@@ -128,8 +131,18 @@ export const updateReceipt = async (req, res) => {
         await connection.query("INSERT INTO lichsu_tonkho (ma_san_pham, so_luong_thay_doi, ly_do, ngay_thay_doi) VALUES (?, ?, ?, NOW())", [ma_nguyen_lieu, diff, `Cập nhật phiếu nhập (#${id})`]);
       }
 
+      // compute new don_gia based on master total price/qty
+      const toNumber = v => Number(v) || 0;
+      const masterTotalQty = toNumber(nlRows[0]?.master_total_qty);
+      const masterTotalPrice = toNumber(nlRows[0]?.master_total_price);
+      let totalCost = 0;
+      if (masterTotalQty > 0) {
+        totalCost = (newConverted / masterTotalQty) * masterTotalPrice;
+      }
+      const computedDonGia = toNumber(so_luong_nhap) > 0 ? (totalCost / toNumber(so_luong_nhap)) : 0;
+
       // update receipt row
-      await connection.query("UPDATE nhapkho_nguyenlieu SET so_luong_nhap = ?, don_vi_id = ?, don_gia = ? WHERE id = ?", [so_luong_nhap, don_vi_id, don_gia || 0, id]);
+      await connection.query("UPDATE nhapkho_nguyenlieu SET so_luong_nhap = ?, don_vi_id = ?, don_gia = ? WHERE id = ?", [so_luong_nhap, don_vi_id, computedDonGia, id]);
 
       await connection.commit();
       res.json({ message: 'Cập nhật phiếu nhập thành công' });

@@ -16,8 +16,10 @@ export const getRecipes = async (req, res) => {
               du.ten as nguyenlieu_don_vi,
               d.he_so_quy_doi AS recipe_he_so,
               du.he_so_quy_doi AS nl_he_so,
-                      -- cost for this recipe line: convert recipe qty to kilograms then multiply by price-per-1kg from master list
-                      ((c.so_luong_can * COALESCE(d.he_so_quy_doi,1)) * COALESCE(nl.gia_nhap,0)) AS cost_per_line
+                          -- cost for this recipe line: (converted recipe qty / master total qty) * master total price
+                          CASE WHEN NULLIF(COALESCE(nl.so_luong_ton,0),0) IS NULL THEN 0
+                            ELSE (((c.so_luong_can * COALESCE(d.he_so_quy_doi,1)) / NULLIF(COALESCE(du.he_so_quy_doi,1),0)) / NULLIF(COALESCE(nl.so_luong_ton,0),0)) * COALESCE(nl.gia_nhap,0)
+                          END AS cost_per_line
        FROM congthuc_sanpham c
        LEFT JOIN sanpham s ON c.ma_san_pham = s.ma_san_pham
        LEFT JOIN nguyenlieu nl ON c.ma_nguyen_lieu = nl.ma_nguyen_lieu
@@ -49,7 +51,11 @@ export const createRecipe = async (req, res) => {
 
     // Calculate total ingredient cost for this product taking unit conversion into account
     const [costRows] = await db.query(
-      `SELECT SUM((c.so_luong_can * COALESCE(d.he_so_quy_doi,1)) * COALESCE(nl.gia_nhap,0)) AS total_cost
+      `SELECT SUM(
+         CASE WHEN NULLIF(COALESCE(nl.so_luong_ton,0),0) IS NULL THEN 0
+              ELSE (((c.so_luong_can * COALESCE(d.he_so_quy_doi,1)) / NULLIF(COALESCE(du.he_so_quy_doi,1),0)) / NULLIF(COALESCE(nl.so_luong_ton,0),0)) * COALESCE(nl.gia_nhap,0)
+         END
+       ) AS total_cost
        FROM congthuc_sanpham c
        LEFT JOIN nguyenlieu nl ON c.ma_nguyen_lieu = nl.ma_nguyen_lieu
        LEFT JOIN donvi d ON c.don_vi_id = d.id
@@ -71,7 +77,9 @@ export const getRecipeByProduct = async (req, res) => {
     const [rows] = await db.query(
       `SELECT c.*, nl.ten_nguyen_lieu, nl.gia_nhap AS nguyenlieu_gia_nhap, nl.don_vi_id AS nl_don_vi_id, d.ten as recipe_don_vi, du.ten as nguyenlieu_don_vi,
               d.he_so_quy_doi AS recipe_he_so, du.he_so_quy_doi AS nl_he_so,
-                      ((c.so_luong_can * COALESCE(d.he_so_quy_doi,1)) * COALESCE(nl.gia_nhap,0)) AS cost_per_line
+                          CASE WHEN NULLIF(COALESCE(nl.so_luong_ton,0),0) IS NULL THEN 0
+                            ELSE (((c.so_luong_can * COALESCE(d.he_so_quy_doi,1)) / NULLIF(COALESCE(du.he_so_quy_doi,1),0)) / NULLIF(COALESCE(nl.so_luong_ton,0),0)) * COALESCE(nl.gia_nhap,0)
+                          END AS cost_per_line
        FROM congthuc_sanpham c
        LEFT JOIN nguyenlieu nl ON c.ma_nguyen_lieu = nl.ma_nguyen_lieu
        LEFT JOIN donvi d ON c.don_vi_id = d.id
