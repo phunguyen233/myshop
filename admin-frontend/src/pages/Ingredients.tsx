@@ -19,6 +19,7 @@ const Ingredients: React.FC = () => {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showReceiptModal, setShowReceiptModal] = useState(false);
   const [search, setSearch] = useState("");
+  const [viewMode, setViewMode] = useState<'ingredients' | 'warehouse'>('ingredients');
 
   useEffect(() => {
     const fetch = async () => {
@@ -200,64 +201,125 @@ const Ingredients: React.FC = () => {
         </div>
       )}
 
-      <div className="flex items-center justify-between w-full">
-        <div className="flex items-center gap-2">
-          <input
-            type="text"
-            placeholder="Tìm kiếm theo tên, mã..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-64 border border-input bg-background text-foreground rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-600"
-          />
-          <button onClick={() => {}} className="bg-gray-200 text-gray-800 hover:bg-gray-300 px-3 py-2 rounded-lg transition">Tìm</button>
+      <div className="w-full flex flex-col items-center gap-4">
+        <div className="flex items-center gap-3">
+          <button onClick={() => setViewMode('warehouse')} className={`px-4 py-2 rounded-lg font-medium ${viewMode === 'warehouse' ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-700'}`}>Kho</button>
+          <button onClick={() => setViewMode('ingredients')} className={`px-4 py-2 rounded-lg font-medium ${viewMode === 'ingredients' ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-700'}`}>Nguyên liệu</button>
         </div>
-        <div>
-          <button onClick={openAddModal} className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg font-semibold transition shadow-sm">Thêm nguyên liệu</button>
+
+        <div className="w-full flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <input
+              type="text"
+              placeholder="Tìm kiếm theo tên, mã..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-64 border border-input bg-background text-foreground rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-600"
+            />
+            <button onClick={() => {}} className="bg-gray-200 text-gray-800 hover:bg-gray-300 px-3 py-2 rounded-lg transition">Tìm</button>
+          </div>
+          <div>
+            {viewMode === 'ingredients' ? (
+              <button onClick={openAddModal} className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg font-semibold transition shadow-sm">Thêm nguyên liệu</button>
+            ) : (
+              <button onClick={() => setShowReceiptModal(true)} className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded-lg font-semibold transition shadow-sm">Nhập kho</button>
+            )}
+          </div>
         </div>
       </div>
 
-      <div className="bg-card p-6 rounded border border-border">
-        <h2 className="text-xl font-semibold mb-4">Danh sách nguyên liệu</h2>
-        <div className="overflow-x-auto rounded-lg border border-border">
-          <table className="w-full text-left text-sm">
-            <thead className="bg-muted/50 text-muted-foreground">
-              <tr>
-                <th className="p-3 font-medium">Mã</th>
-                <th className="p-3 font-medium">Tên nguyên liệu</th>
-                <th className="p-3 font-medium text-right">Số lượng</th>
-                <th className="p-3 font-medium">Đơn vị</th>
-                <th className="p-3 font-medium text-right">Giá nhập</th>
-                <th className="p-3 font-medium text-center">Hành động</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {items.filter(i => !search || i.ten_nguyen_lieu.toLowerCase().includes(search.toLowerCase())).length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="p-4 text-center text-muted-foreground">
-                    Chưa có nguyên liệu nào
-                  </td>
-                </tr>
-                ) : (
-                items.filter(i => !search || i.ten_nguyen_lieu.toLowerCase().includes(search.toLowerCase())).map(i => (
-                  <tr key={i.ma_nguyen_lieu} className="hover:bg-muted/50 transition-colors">
-                    <td className="p-3 text-foreground">{i.ma_nguyen_lieu}</td>
-                    <td className="p-3 text-foreground font-medium">{i.ten_nguyen_lieu}</td>
-                    <td className="p-3 text-right text-foreground">{fmtQty(i.so_luong_ton)}</td>
-                    <td className="p-3 text-foreground">{i.don_vi}</td>
-                    <td className="p-3 text-right text-foreground">{(i.gia_nhap || 0).toLocaleString('vi-VN')}₫</td>
-                    <td className="p-3 text-center">
-                      <div className="flex items-center justify-center gap-2">
-                        <button onClick={() => handleEdit(i)} className="px-3 py-1 rounded bg-white border border-border hover:bg-green-600 hover:text-white text-foreground text-xs">Sửa</button>
-                        <button onClick={() => handleDelete(i.ma_nguyen_lieu)} className="px-3 py-1 rounded bg-white border border-border hover:bg-red-600 hover:text-white text-foreground text-xs">Xóa</button>
-                        <button onClick={() => openReceiptModalFor(i)} className="px-3 py-1 rounded bg-white border border-border hover:bg-indigo-600 hover:text-white text-foreground text-xs">Nhập kho</button>
-                      </div>
-                    </td>
+      <div className="bg-card p-6 rounded border border-border w-full">
+        {viewMode === 'ingredients' ? (
+          <>
+            <h2 className="text-xl font-semibold mb-4">Danh sách nguyên liệu</h2>
+            <div className="overflow-x-auto rounded-lg border border-border">
+              <table className="w-full text-left text-sm">
+                <thead className="bg-muted/50 text-muted-foreground">
+                  <tr>
+                    <th className="p-3 font-medium">Mã</th>
+                    <th className="p-3 font-medium">Tên nguyên liệu</th>
+                    <th className="p-3 font-medium text-right">Số lượng</th>
+                    <th className="p-3 font-medium">Đơn vị</th>
+                    <th className="p-3 font-medium text-right">Giá/1kg</th>
+                    <th className="p-3 font-medium text-center">Hành động</th>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {items.filter(i => !search || i.ten_nguyen_lieu.toLowerCase().includes(search.toLowerCase())).length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="p-4 text-center text-muted-foreground">
+                        Chưa có nguyên liệu nào
+                      </td>
+                    </tr>
+                    ) : (
+                    items.filter(i => !search || i.ten_nguyen_lieu.toLowerCase().includes(search.toLowerCase())).map(i => (
+                      <tr key={i.ma_nguyen_lieu} className="hover:bg-muted/50 transition-colors">
+                        <td className="p-3 text-foreground">{i.ma_nguyen_lieu}</td>
+                        <td className="p-3 text-foreground font-medium">{i.ten_nguyen_lieu}</td>
+                        <td className="p-3 text-right text-foreground">{fmtQty(i.so_luong_ton)}</td>
+                        <td className="p-3 text-foreground">{i.don_vi}</td>
+                        <td className="p-3 text-right text-foreground">{(i.gia_nhap || 0).toLocaleString('vi-VN')}₫</td>
+                        <td className="p-3 text-center">
+                          <div className="flex items-center justify-center gap-2">
+                            <button onClick={() => handleEdit(i)} className="px-3 py-1 rounded bg-white border border-border hover:bg-green-600 hover:text-white text-foreground text-xs">Sửa</button>
+                            <button onClick={() => handleDelete(i.ma_nguyen_lieu)} className="px-3 py-1 rounded bg-white border border-border hover:bg-red-600 hover:text-white text-foreground text-xs">Xóa</button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </>
+        ) : (
+          <>
+            <h2 className="text-xl font-semibold mb-4">Kho nguyên liệu</h2>
+            <div className="overflow-x-auto rounded-lg border border-border">
+              <table className="w-full text-left text-sm">
+                <thead className="bg-muted/50 text-muted-foreground">
+                  <tr>
+                    <th className="p-3 font-medium">Mã</th>
+                    <th className="p-3 font-medium">Tên nguyên liệu</th>
+                    <th className="p-3 font-medium text-right">Số lượng</th>
+                    <th className="p-3 font-medium">Đơn vị</th>
+                    <th className="p-3 font-medium text-right">Giá trị (VNĐ)</th>
+                    <th className="p-3 font-medium text-center">Hành động</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {items.filter(i => !search || i.ten_nguyen_lieu.toLowerCase().includes(search.toLowerCase())).length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="p-4 text-center text-muted-foreground">Chưa có dữ liệu kho</td>
+                    </tr>
+                  ) : (
+                    items.filter(i => !search || i.ten_nguyen_lieu.toLowerCase().includes(search.toLowerCase())).map(i => {
+                      const storedUnit = units.find(u => u.id === i.don_vi_id) || { he_so_quy_doi: 1, ten: '' };
+                      const qty = Number(i.so_luong_ton) || 0;
+                      const qtyInKg = qty * (Number(storedUnit.he_so_quy_doi) || 1);
+                      const value = qtyInKg * (Number(i.gia_nhap) || 0);
+                      return (
+                        <tr key={i.ma_nguyen_lieu} className="hover:bg-muted/50 transition-colors">
+                          <td className="p-3 text-foreground">{i.ma_nguyen_lieu}</td>
+                          <td className="p-3 text-foreground font-medium">{i.ten_nguyen_lieu}</td>
+                          <td className="p-3 text-right text-foreground">{fmtQty(qty)} {storedUnit.ten}</td>
+                          <td className="p-3 text-foreground">{storedUnit.ten}</td>
+                          <td className="p-3 text-right text-foreground">{Number(value || 0).toLocaleString('vi-VN')}₫</td>
+                          <td className="p-3 text-center">
+                            <div className="flex items-center justify-center gap-2">
+                              <button onClick={() => handleEdit(i)} className="px-3 py-1 rounded bg-white border border-border hover:bg-green-600 hover:text-white text-foreground text-xs">Sửa</button>
+                              <button onClick={() => handleDelete(i.ma_nguyen_lieu)} className="px-3 py-1 rounded bg-white border border-border hover:bg-red-600 hover:text-white text-foreground text-xs">Xóa</button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
       </div>
 
       {/* Add Modal */}
