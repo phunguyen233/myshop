@@ -50,14 +50,8 @@ export const addReceipt = async (req, res) => {
         [ma_nguyen_lieu, so_luong_nhap, don_vi_id, computedDonGia]
       );
 
-      // Tăng tồn kho nguyên liệu bằng lượng đã quy đổi về đơn vị lưu trữ
-      await connection.query("UPDATE nguyenlieu SET so_luong_ton = so_luong_ton + ? WHERE ma_nguyen_lieu = ?", [converted, ma_nguyen_lieu]);
-
-      // Ghi lich su ton kho (nếu có bảng lichsu_tonkho) - ghi lượng đã quy đổi
-      await connection.query(
-        "INSERT INTO lichsu_tonkho (ma_san_pham, so_luong_thay_doi, ly_do, ngay_thay_doi) VALUES (?, ?, ?, NOW())",
-        [ma_nguyen_lieu, converted, `Nhập kho nguyên liệu (phiếu ${ins.insertId})`]
-      );
+      // Theo yêu cầu: chỉ lưu phiếu nhập vào `nhapkho_nguyenlieu` (kho),
+      // không cập nhật trực tiếp `nguyenlieu.so_luong_ton` (danh sách nguyên liệu) và không ghi `lichsu_tonkho`.
 
       await connection.commit();
       res.status(201).json({ message: "Nhập kho nguyên liệu thành công", id: ins.insertId });
@@ -125,11 +119,8 @@ export const updateReceipt = async (req, res) => {
 
       const diff = newConverted - oldConverted;
 
-      // update stock
-      if (diff !== 0) {
-        await connection.query("UPDATE nguyenlieu SET so_luong_ton = so_luong_ton + ? WHERE ma_nguyen_lieu = ?", [diff, ma_nguyen_lieu]);
-        await connection.query("INSERT INTO lichsu_tonkho (ma_san_pham, so_luong_thay_doi, ly_do, ngay_thay_doi) VALUES (?, ?, ?, NOW())", [ma_nguyen_lieu, diff, `Cập nhật phiếu nhập (#${id})`]);
-      }
+      // Theo yêu cầu: khi cập nhật phiếu nhập, không thay đổi `nguyenlieu.so_luong_ton`.
+      // Chỉ cập nhật thông tin trong `nhapkho_nguyenlieu` dưới (phần cập nhật receipt row bên dưới).
 
       // compute new don_gia based on master total price/qty
       const masterTotalQty = toNumber(nlRows[0]?.master_total_qty);
@@ -185,11 +176,8 @@ export const deleteReceipt = async (req, res) => {
         converted = (toNumber(existing.so_luong_nhap) * toNumber(info.incoming_he_so)) / toNumber(info.nl_he_so);
       }
 
-      // subtract from stock
-      await connection.query("UPDATE nguyenlieu SET so_luong_ton = so_luong_ton - ? WHERE ma_nguyen_lieu = ?", [converted, ma_nguyen_lieu]);
-      await connection.query("INSERT INTO lichsu_tonkho (ma_san_pham, so_luong_thay_doi, ly_do, ngay_thay_doi) VALUES (?, ?, ?, NOW())", [ma_nguyen_lieu, -converted, `Xóa phiếu nhập (#${id})`]);
-
-      // delete receipt
+      // Theo yêu cầu: khi xóa phiếu nhập, không thay đổi `nguyenlieu.so_luong_ton`.
+      // Chỉ xóa dòng trong `nhapkho_nguyenlieu`.
       await connection.query("DELETE FROM nhapkho_nguyenlieu WHERE id = ?", [id]);
 
       await connection.commit();
