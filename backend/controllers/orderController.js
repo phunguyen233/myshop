@@ -276,37 +276,65 @@ export const updateOrderStatus = async (req, res) => {
             return res.status(409).json({ message: 'Nguyên liệu không đủ để hoàn tất đơn', shortages });
           }
 
-          // Nếu đủ, trừ nguyên liệu
+          // Nếu đủ, trừ nguyên liệu bằng cách ghi các dòng âm vào `nhapkho_nguyenlieu`
+          // (không cập nhật trực tiếp bảng `nguyenlieu`).
           deductions = [];
+
+          // Lấy thông tin nguyên liệu (đơn vị lưu trữ, giá tổng, số lượng tổng) để tính đơn giá theo đơn vị lưu trữ
+          const [nlInfos] = await connection.query(
+            `SELECT ma_nguyen_lieu, don_vi_id, gia_nhap AS master_total_price, so_luong_ton AS master_total_qty, ten_nguyen_lieu
+             FROM nguyenlieu WHERE ma_nguyen_lieu IN (${neededKeys.map(() => '?').join(',')})`,
+            neededKeys
+          );
+          const nlInfoMap = {};
+          for (const r of nlInfos) nlInfoMap[r.ma_nguyen_lieu] = r;
+
           for (const k of neededKeys) {
             const deduct = Number(neededMap[k] || 0);
             if (deduct <= 0) continue;
-            // record before
+
             const before = Number(stockMap[k] || 0);
+
+            // insert a negative receipt row in stored unit (don_vi_id = nl.don_vi_id) with so_luong_nhap negative
+            const info = nlInfoMap[k] || {};
+            const storeUnitId = info.don_vi_id || null;
+            const masterTotalQty = Number(info.master_total_qty || 0);
+            const masterTotalPrice = Number(info.master_total_price || 0);
+            let perUnitPrice = 0;
+            if (masterTotalQty > 0) {
+              perUnitPrice = masterTotalPrice / masterTotalQty;
+            }
+
+            // Insert negative entry: so_luong_nhap stored in the stored-unit, so use -deduct and don_vi_id = stored unit
             await connection.query(
-              "UPDATE nguyenlieu SET so_luong_ton = GREATEST(0, so_luong_ton - ?) WHERE ma_nguyen_lieu = ?",
-              [deduct, k]
+              "INSERT INTO nhapkho_nguyenlieu (ma_nguyen_lieu, so_luong_nhap, don_vi_id, don_gia, ngay_nhap) VALUES (?, ?, ?, ?, NOW())",
+              [k, -deduct, storeUnitId, perUnitPrice]
             );
-            // we'll collect after values below
+
             deductions.push({ ma_nguyen_lieu: k, deducted: deduct, before });
           }
 
-          // Fetch after-values and unit/name for reporting
+          // Fetch after-values and unit/name for reporting (aggregated warehouse qty)
           if (deductions.length > 0) {
             const ids = deductions.map(d => d.ma_nguyen_lieu);
             const placeholders2 = ids.map(() => '?').join(',');
             const [afterRows] = await connection.query(
-              `SELECT n.ma_nguyen_lieu, n.ten_nguyen_lieu, n.so_luong_ton, d.ten as don_vi
-               FROM nguyenlieu n LEFT JOIN donvi d ON n.don_vi_id = d.id
-               WHERE n.ma_nguyen_lieu IN (${placeholders2})`,
+              `SELECT n.ma_nguyen_lieu, n.ten_nguyen_lieu,
+                      COALESCE(SUM(nh.so_luong_nhap * COALESCE(din.he_so_quy_doi,1) / COALESCE(dnl.he_so_quy_doi,1)),0) AS kho_qty,
+                      dnl.ten as don_vi
+               FROM nguyenlieu n
+               LEFT JOIN nhapkho_nguyenlieu nh ON nh.ma_nguyen_lieu = n.ma_nguyen_lieu
+               LEFT JOIN donvi dnl ON n.don_vi_id = dnl.id
+               LEFT JOIN donvi din ON din.id = nh.don_vi_id
+               WHERE n.ma_nguyen_lieu IN (${placeholders2})
+               GROUP BY n.ma_nguyen_lieu, n.ten_nguyen_lieu, dnl.ten`,
               ids
             );
             const afterMap = {};
             for (const r of afterRows) afterMap[r.ma_nguyen_lieu] = r;
-            // enrich deductions
             for (const dd of deductions) {
               const a = afterMap[dd.ma_nguyen_lieu] || {};
-              dd.after = Number(a.so_luong_ton || 0);
+              dd.after = Number(a.kho_qty || 0);
               dd.ten_nguyen_lieu = a.ten_nguyen_lieu || null;
               dd.don_vi = a.don_vi || null;
             }
