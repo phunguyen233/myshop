@@ -53,8 +53,18 @@ export const addReceipt = async (req, res) => {
       // Theo yêu cầu: chỉ lưu phiếu nhập vào `nhapkho_nguyenlieu` (kho),
       // không cập nhật trực tiếp `nguyenlieu.so_luong_ton` (danh sách nguyên liệu) và không ghi `lichsu_tonkho`.
 
+      // compute total for this receipt (stored unit price already computed as computedDonGia)
+      const tong_tien = totalCost;
+
+      // compute aggregate inventory total from ingredient receipts (sum of so_luong_nhap * don_gia)
+      const [[aggRow]] = await connection.query(
+        `SELECT COALESCE(SUM(so_luong_nhap * don_gia),0) AS inventory_total FROM nhapkho_nguyenlieu`
+      );
+      const inventoryTotal = Number(aggRow?.inventory_total || 0);
+
       await connection.commit();
-      res.status(201).json({ message: "Nhập kho nguyên liệu thành công", id: ins.insertId });
+      // return computed unit price, receipt total and aggregate inventory total
+      res.status(201).json({ message: "Nhập kho nguyên liệu thành công", id: ins.insertId, don_gia: computedDonGia, tong_tien, inventoryTotal });
     } catch (e) {
       await connection.rollback();
       console.error(e);

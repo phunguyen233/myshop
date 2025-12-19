@@ -155,7 +155,7 @@ const Ingredients: React.FC = () => {
 
     try {
       setReceiptLoading(true);
-      await receiptAPI.add(receipt.ma_nguyen_lieu, { 
+      const resp = await receiptAPI.add(receipt.ma_nguyen_lieu, { 
         so_luong_nhap: receipt.so_luong_nhap, 
         don_vi_id: receipt.don_vi_id
       });
@@ -169,6 +169,11 @@ const Ingredients: React.FC = () => {
       setReceipt({ ma_nguyen_lieu: 0, so_luong_nhap: 0, don_vi_id: 0, don_gia: 0 });
       setShowReceiptModal(false);
       setSuccessMsg("Nhập kho nguyên liệu thành công!");
+      // notify dashboard/statistics to refresh totals (inventory cost changed)
+      try {
+        const added = Number(resp?.tong_tien || 0);
+        window.dispatchEvent(new CustomEvent('statsUpdated', { detail: { inventoryAdded: added, inventoryTotal: Number(resp?.inventoryTotal || 0) } }));
+      } catch (e) { /* ignore */ }
       setTimeout(() => setSuccessMsg(""), 3000);
     } catch (err: any) {
       console.error(err);
@@ -476,7 +481,11 @@ const Ingredients: React.FC = () => {
                         const delta = newQty - prevQty;
                         if (delta !== 0) {
                           // create an adjustment receipt in warehouse to reflect change
-                          await receiptAPI.add(currentWarehouseItem.ma_nguyen_lieu, { so_luong_nhap: delta, don_vi_id: warehouseEditUnitId });
+                          const adj = await receiptAPI.add(currentWarehouseItem.ma_nguyen_lieu, { so_luong_nhap: delta, don_vi_id: warehouseEditUnitId });
+                          try {
+                            const added = Number(adj?.tong_tien || 0);
+                            window.dispatchEvent(new CustomEvent('statsUpdated', { detail: { inventoryAdded: added, inventoryTotal: Number(adj?.inventoryTotal || 0) } }));
+                          } catch (e) { /* ignore */ }
                         }
                         // refresh data
                         await refreshMergedData();
