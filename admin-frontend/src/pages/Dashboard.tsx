@@ -38,7 +38,7 @@ const Dashboard: React.FC = () => {
           const completedRevenue = (orderRes || []).reduce((sum: number, o: any) => {
             const status = o.trang_thai || o.trangThai || o.status;
             const amount = Number(o.tong_tien || o.tongTien || o.total || 0) || 0;
-            return sum + ((status === 'da_thanh_toan') ? amount : 0);
+            return sum + ((status === 'hoan_tat') ? amount : 0);
           }, 0);
           setTotalRevenue(completedRevenue);
 
@@ -163,8 +163,8 @@ const Dashboard: React.FC = () => {
             <PieChart
               data={[
                 { label: "Tổng doanh thu", value: totalRevenue, color: "#16a34a" },
-                { label: "Tổng tiền nhập sản phẩm", value: totalInventoryCost, color: "#f59e0b" },
-                { label: "Tiền lãi", value: Math.max(0, profit), color: "#3b82f6" },
+                { label: "Tổng tiền nhập nguyên liệu", value: totalInventoryCost, color: "#f59e0b" },
+                { label: "Lợi nhuận", value: Math.max(0, profit), color: "#3b82f6" },
               ]}
             />
           </div>
@@ -174,15 +174,15 @@ const Dashboard: React.FC = () => {
               <div className="text-2xl font-bold text-green-700">{Number(totalRevenue).toLocaleString()} đ</div>
             </div>
             <div className="bg-gray-50 p-4 rounded mb-3">
-              <div className="text-sm text-gray-600">Tổng tiền nhập sản phẩm</div>
+              <div className="text-sm text-gray-600">Tổng tiền nhập nguyên liệu</div>
               <div className="text-2xl font-bold text-yellow-700">{Number(totalInventoryCost).toLocaleString()} đ</div>
             </div>
             <div className="bg-gray-50 p-4 rounded">
-              <div className="text-sm text-gray-600">Tiền lãi</div>
+              <div className="text-sm text-gray-600">Lợi nhuận</div>
               <div className={`text-2xl font-bold ${profit >= 0 ? 'text-green-700' : 'text-red-600'}`}>{Number(profit).toLocaleString()} đ</div>
             </div>
             {profit < 0 && (
-              <p className="text-sm text-red-600 mt-3">Lưu ý: Tiền lãi âm (lỗ) trong khoảng thời gian đã chọn.</p>
+              <p className="text-sm text-red-600 mt-3">Lưu ý: Lợi nhuận âm (lỗ) trong khoảng thời gian đã chọn.</p>
             )}
           </div>
         </div>

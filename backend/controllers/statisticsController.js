@@ -30,7 +30,7 @@ export const getStatistics = async (req, res) => {
         COUNT(d.ma_don_hang) AS orders
       FROM donhang d
       WHERE DATE(DATE_ADD(d.thoi_gian_mua, INTERVAL 7 HOUR)) BETWEEN ? AND ?
-        AND d.trang_thai = 'da_thanh_toan'
+        AND d.trang_thai = 'hoan_tat'
       GROUP BY ${groupExpr}
       ORDER BY date ASC
     `;
@@ -40,15 +40,17 @@ export const getStatistics = async (req, res) => {
     console.log("Kết quả đơn hàng:", orderRows);
 
     // Receipts query
-    const receiptsGroupExpr = groupExpr.replace(/d\.thoi_gian_mua/g, 'n.thoi_gian_nhap');
-    const receiptsSelectExpr = selectExpr.replace(/d\.thoi_gian_mua/g, 'n.thoi_gian_nhap');
+    const receiptsGroupExpr = groupExpr.replace(/d\.thoi_gian_mua/g, 'n.ngay_nhap');
+    const receiptsSelectExpr = selectExpr.replace(/d\.thoi_gian_mua/g, 'n.ngay_nhap');
 
+    // Aggregate inventory cost from ingredient receipts table (nhapkho_nguyenlieu)
+    // Sum of (so_luong_nhap * don_gia) — note entries can be negative for deductions
     const receiptsQuery = `
       SELECT
         ${receiptsSelectExpr} AS date,
-        COALESCE(SUM(n.tong_gia_tri), 0) AS inventory_cost
-      FROM nhapkho n
-      WHERE DATE(DATE_ADD(n.thoi_gian_nhap, INTERVAL 7 HOUR)) BETWEEN ? AND ?
+        COALESCE(SUM(n.so_luong_nhap * n.don_gia), 0) AS inventory_cost
+      FROM nhapkho_nguyenlieu n
+      WHERE DATE(DATE_ADD(n.ngay_nhap, INTERVAL 7 HOUR)) BETWEEN ? AND ?
       GROUP BY ${receiptsGroupExpr}
       ORDER BY date ASC
     `;
@@ -81,11 +83,11 @@ export const getStatistics = async (req, res) => {
     const totalRevenue = stats.reduce((sum, s) => sum + (s.revenue || 0), 0);
     const totalOrders = stats.reduce((sum, s) => sum + (s.orders || 0), 0);
 
-    // Tổng tồn kho
+    // Tổng tiền nhập nguyên liệu trong khoảng (tính từ bảng nhapkho_nguyenlieu)
     const [[invRow]] = await db.query(
-      `SELECT COALESCE(SUM(tong_gia_tri),0) AS inventory_cost 
-       FROM nhapkho 
-       WHERE DATE(DATE_ADD(thoi_gian_nhap, INTERVAL 7 HOUR)) BETWEEN ? AND ?`,
+      `SELECT COALESCE(SUM(so_luong_nhap * don_gia),0) AS inventory_cost
+       FROM nhapkho_nguyenlieu
+       WHERE DATE(DATE_ADD(ngay_nhap, INTERVAL 7 HOUR)) BETWEEN ? AND ?`,
       [startDate, endDate]
     );
     const inventoryCost = Number(invRow?.inventory_cost || 0);
@@ -97,16 +99,20 @@ export const getStatistics = async (req, res) => {
         DATE_FORMAT(DATE_ADD(d.thoi_gian_mua, INTERVAL 7 HOUR), '%Y-%m-%d %H:%i:%s') AS thoi_gian_mua
         FROM donhang d
         WHERE DATE(DATE_ADD(d.thoi_gian_mua, INTERVAL 7 HOUR)) BETWEEN ? AND ? 
-        AND d.trang_thai = 'da_thanh_toan'
+        AND d.trang_thai = 'hoan_tat'
         ORDER BY d.thoi_gian_mua DESC`,
         [startDate, endDate]
       );
 
       const [receiptsList] = await db.query(
-        `SELECT n.ma_nhap, DATE_FORMAT(DATE_ADD(n.thoi_gian_nhap, INTERVAL 7 HOUR), '%Y-%m-%d %H:%i:%s') AS thoi_gian_nhap, n.tong_gia_tri
-        FROM nhapkho n
-        WHERE DATE(DATE_ADD(n.thoi_gian_nhap, INTERVAL 7 HOUR)) BETWEEN ? AND ?
-        ORDER BY n.thoi_gian_nhap DESC`,
+        `SELECT n.id, n.ma_nguyen_lieu, ng.ten_nguyen_lieu, n.so_luong_nhap, n.don_vi_id, d.ten AS don_vi, n.don_gia, 
+                (n.so_luong_nhap * n.don_gia) AS tong_tien, 
+                DATE_FORMAT(DATE_ADD(n.ngay_nhap, INTERVAL 7 HOUR), '%Y-%m-%d %H:%i:%s') AS ngay_nhap
+         FROM nhapkho_nguyenlieu n
+         LEFT JOIN nguyenlieu ng ON ng.ma_nguyen_lieu = n.ma_nguyen_lieu
+         LEFT JOIN donvi d ON d.id = n.don_vi_id
+         WHERE DATE(DATE_ADD(n.ngay_nhap, INTERVAL 7 HOUR)) BETWEEN ? AND ?
+         ORDER BY n.ngay_nhap DESC`,
         [startDate, endDate]
       );
 

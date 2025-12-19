@@ -64,34 +64,10 @@ export default function StatisticsPage() {
       setOrdersList(data.ordersList || []);
       setReceiptsList(data.receiptsList || []);
 
-      // Recompute totals from orders: totalRevenue should be sum of tong_tien
-      // for orders with trang_thai === 'da_thanh_toan' within the selected date range.
-      try {
-        const allOrders = await orderAPI.getAll();
-        const completed = (allOrders || []).filter((o: any) => {
-          const status = o.trang_thai || o.trangThai || o.status;
-          if (status !== 'da_thanh_toan') return false;
-          const time = o.thoi_gian_mua || o.created_at || o.createdAt || o.time;
-          if (!time) return false;
-          const d = new Date(time);
-          if (isNaN(d.getTime())) return false;
-          const ds = d.toISOString().split('T')[0];
-          return ds >= sd && ds <= ed;
-        });
-
-        const revenueSum = completed.reduce((s: number, o: any) => s + (Number(o.tong_tien || o.tongTien || o.total || 0) || 0), 0);
-        setTotalRevenue(revenueSum);
-        setTotalOrders(completed.length || 0);
-        // profit = revenue from completed orders - inventoryCost
-        const invCost = Number(data.inventoryCost || 0);
-        setProfit(revenueSum - invCost);
-      } catch (e) {
-        // If orders fetch fails, fall back to server-provided totals if any
-        console.warn('Không thể lấy danh sách đơn để tính tổng doanh thu, dùng dữ liệu server nếu có', e);
-        setTotalRevenue(data.totalRevenue || 0);
-        setTotalOrders(data.totalOrders || 0);
-        setProfit(data.profit || 0);
-      }
+      // Use server-provided totals (server now computes revenue as sum of orders with status 'hoan_tat')
+      setTotalRevenue(Number(data.totalRevenue || 0));
+      setTotalOrders(Number(data.totalOrders || 0));
+      setProfit(Number(data.profit || 0));
 
     } catch (err) {
       console.error(err);
@@ -207,11 +183,11 @@ export default function StatisticsPage() {
           <p className="text-3xl font-bold text-blue-600">{totalOrders}</p>
         </div>
         <div className="bg-white rounded-lg shadow-md p-6">
-          <h3 className="text-gray-600 text-sm font-medium">Tổng tiền nhập sản phẩm</h3>
+          <h3 className="text-gray-600 text-sm font-medium">Tổng tiền nhập nguyên liệu</h3>
           <p className="text-3xl font-bold text-yellow-600">{Number(inventoryCost).toLocaleString()}đ</p>
         </div>
         <div className="bg-white rounded-lg shadow-md p-6">
-          <h3 className="text-gray-600 text-sm font-medium">Tiền lãi</h3>
+          <h3 className="text-gray-600 text-sm font-medium">Lợi nhuận</h3>
           <p className={`text-3xl font-bold ${profit >= 0 ? 'text-green-600' : 'text-red-600'}`}>{Number(profit).toLocaleString()}đ</p>
         </div>
       </div>
@@ -231,10 +207,10 @@ export default function StatisticsPage() {
                 Số đơn hàng
               </th>
               <th className="px-6 py-3 text-right font-semibold text-gray-700">
-                Tiền nhập kho
+                Tổng tiền nhập nguyên liệu
               </th>
               <th className="px-6 py-3 text-right font-semibold text-gray-700">
-                Tiền lãi
+                Lợi nhuận
               </th>
               <th className="px-6 py-3 text-right font-semibold text-gray-700">
                 Doanh thu / đơn

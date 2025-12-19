@@ -22,6 +22,9 @@ const Ingredients: React.FC = () => {
   const [warehouseEditUnitId, setWarehouseEditUnitId] = useState<number>(0);
   const [currentWarehouseItem, setCurrentWarehouseItem] = useState<any | null>(null);
   const [showReceiptModal, setShowReceiptModal] = useState(false);
+  const [showReceiptsListModal, setShowReceiptsListModal] = useState(false);
+  const [receiptsList, setReceiptsList] = useState<any[]>([]);
+  const [selectedReceiptIngredientName, setSelectedReceiptIngredientName] = useState<string>("");
   const [search, setSearch] = useState("");
   const [viewMode, setViewMode] = useState<'ingredients' | 'warehouse'>('ingredients');
   const refreshMergedData = async () => {
@@ -186,6 +189,19 @@ const Ingredients: React.FC = () => {
     setShowReceiptModal(true);
   };
 
+  const openReceiptsListFor = async (item: any) => {
+    try {
+      setSelectedReceiptIngredientName(item.ten_nguyen_lieu || '');
+      setShowReceiptsListModal(true);
+      const rows = await receiptAPI.listByIngredient(item.ma_nguyen_lieu);
+      setReceiptsList(rows || []);
+    } catch (e) {
+      console.error('Lỗi khi tải phiếu nhập', e);
+      setReceiptsList([]);
+      setShowReceiptsListModal(true);
+    }
+  };
+
   // compute converted preview for receipt: show how much will be added in the ingredient's stored unit
   const getReceiptPreview = () => {
     try {
@@ -347,6 +363,7 @@ const Ingredients: React.FC = () => {
                             <div className="flex items-center justify-center gap-2">
                               <button onClick={() => handleEdit(i, true)} className="px-3 py-1 rounded bg-white border border-border hover:bg-green-600 hover:text-white text-foreground text-xs">Sửa</button>
                               <button onClick={() => handleDelete(i.ma_nguyen_lieu)} className="px-3 py-1 rounded bg-white border border-border hover:bg-red-600 hover:text-white text-foreground text-xs">Xóa</button>
+                              <button onClick={() => openReceiptsListFor(i)} className="px-3 py-1 rounded bg-white border border-border hover:bg-blue-600 hover:text-white text-foreground text-xs">Phiếu nhập</button>
                             </div>
                           </td>
                         </tr>
@@ -518,6 +535,60 @@ const Ingredients: React.FC = () => {
                 <button className="px-4 py-2 rounded border" onClick={() => setShowReceiptModal(false)}>Hủy</button>
                 <button onClick={async () => { await handleReceipt(); }} className="px-4 py-2 rounded bg-green-600 text-white">Lưu</button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Receipts List Modal */}
+      {showReceiptsListModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/40" onClick={() => setShowReceiptsListModal(false)} />
+          <div className="bg-white rounded shadow-lg p-6 z-10 w-full max-w-2xl">
+            <h3 className="text-lg font-semibold mb-4">Phiếu nhập — {selectedReceiptIngredientName}</h3>
+            <div className="rounded-lg border border-border overflow-hidden">
+              <div className="h-80 overflow-y-auto">
+                <div className="min-w-full overflow-x-auto">
+                  <table className="w-full text-left text-sm">
+                    <thead className="bg-muted/50 text-muted-foreground">
+                      <tr>
+                        <th className="p-3 font-medium">Thời gian</th>
+                        <th className="p-3 font-medium">Nguyên liệu</th>
+                        <th className="p-3 font-medium text-right">Số lượng</th>
+                        <th className="p-3 font-medium">Đơn vị</th>
+                        <th className="p-3 font-medium text-right">Đơn giá</th>
+                        <th className="p-3 font-medium text-right">Tổng tiền</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border">
+                      {receiptsList.length === 0 ? (
+                        <tr><td colSpan={6} className="p-4 text-center text-muted-foreground">Chưa có phiếu nhập</td></tr>
+                      ) : (
+                        receiptsList.map(r => {
+                          const unit = units.find(u => u.id === r.don_vi_id) || { ten: '' };
+                          const qty = Number(r.so_luong_nhap || 0);
+                          const unitPrice = Number(r.don_gia || 0);
+                          const total = qty * unitPrice;
+                          const date = r.ngay_nhap ? String(r.ngay_nhap) : '';
+                          return (
+                            <tr key={r.id} className="hover:bg-muted/50 transition-colors">
+                              <td className="p-3 text-foreground">{date}</td>
+                              <td className="p-3 text-foreground">{selectedReceiptIngredientName}</td>
+                              <td className="p-3 text-right text-foreground">{fmtQty(qty)}</td>
+                              <td className="p-3 text-foreground">{unit.ten}</td>
+                              <td className="p-3 text-right text-foreground">{Number(unitPrice || 0).toLocaleString('vi-VN')}₫</td>
+                              <td className="p-3 text-right text-foreground">{Number(total || 0).toLocaleString('vi-VN')}₫</td>
+                            </tr>
+                          );
+                        })
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+            <div className="flex justify-end mt-4">
+              <button onClick={() => setShowReceiptsListModal(false)} className="px-4 py-2 rounded border">Đóng</button>
             </div>
           </div>
         </div>
