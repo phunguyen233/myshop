@@ -255,75 +255,60 @@ export const updateOrderStatus = async (req, res) => {
         // Nếu không có nguyên liệu cần trừ thì bỏ qua
         const neededKeys = Object.keys(neededMap);
         if (neededKeys.length > 0) {
-          // Kiểm tra tồn kho ở `nhapkho_nguyenlieu` (kho), chuyển về đơn vị lưu trữ để so sánh
+          // Lấy tồn hiện tại cho các nguyên liệu cần thiết
           const placeholders = neededKeys.map(() => '?').join(',');
-          const [warehouseRows] = await connection.query(
-            `SELECT n.ma_nguyen_lieu,
-                    SUM( (n.so_luong_nhap * COALESCE(di.he_so_quy_doi,1)) / COALESCE(ds.he_so_quy_doi,1) ) AS warehouse_qty
-             FROM nhapkho_nguyenlieu n
-             LEFT JOIN donvi di ON n.don_vi_id = di.id
-             LEFT JOIN nguyenlieu nl ON n.ma_nguyen_lieu = nl.ma_nguyen_lieu
-             LEFT JOIN donvi ds ON nl.don_vi_id = ds.id
-             WHERE n.ma_nguyen_lieu IN (${placeholders})
-             GROUP BY n.ma_nguyen_lieu`,
-            neededKeys
-          );
+          const [stocks] = await connection.query(`SELECT ma_nguyen_lieu, so_luong_ton FROM nguyenlieu WHERE ma_nguyen_lieu IN (${placeholders})`, neededKeys);
 
-          const warehouseMap = {};
-          for (const r of warehouseRows) warehouseMap[r.ma_nguyen_lieu] = Number(r.warehouse_qty || 0);
-
-          // Kiểm tra thiếu hụt so với nhu cầu
+          // Kiểm tra thiếu hụt
           const shortages = [];
+          const stockMap = {};
+          for (const s of stocks) stockMap[s.ma_nguyen_lieu] = Number(s.so_luong_ton || 0);
           for (const k of neededKeys) {
             const need = Number(neededMap[k] || 0);
-            const have = Number(warehouseMap[k] || 0);
-            if (have < need) shortages.push({ ma_nguyen_lieu: k, need, have });
+            const have = Number(stockMap[k] || 0);
+            if (have < need) {
+              shortages.push({ ma_nguyen_lieu: k, need, have });
+            }
           }
+
           if (shortages.length > 0) {
             await connection.rollback();
-            return res.status(409).json({ message: 'Nguyên liệu kho không đủ để hoàn tất đơn', shortages });
+            return res.status(409).json({ message: 'Nguyên liệu không đủ để hoàn tất đơn', shortages });
           }
 
-          // Nếu đủ: ghi các bản ghi âm (negative) vào `nhapkho_nguyenlieu` để trừ kho
+          // Nếu đủ, trừ nguyên liệu
           deductions = [];
-          // cần biết đơn vị lưu trữ (don_vi_id) của từng nguyên liệu
-          const [nlRows] = await connection.query(`SELECT ma_nguyen_lieu, don_vi_id, gia_nhap FROM nguyenlieu WHERE ma_nguyen_lieu IN (${placeholders})`, neededKeys);
-          const nlMap = {};
-          for (const r of nlRows) nlMap[r.ma_nguyen_lieu] = r;
-
           for (const k of neededKeys) {
             const deduct = Number(neededMap[k] || 0);
             if (deduct <= 0) continue;
-            const nl = nlMap[k] || { don_vi_id: null };
-            const storedUnitId = nl.don_vi_id || null;
-            // Insert negative receipt in stored unit so that warehouse aggregates decrease
+            // record before
+            const before = Number(stockMap[k] || 0);
             await connection.query(
-              "INSERT INTO nhapkho_nguyenlieu (ma_nguyen_lieu, so_luong_nhap, don_vi_id, don_gia, ngay_nhap) VALUES (?, ?, ?, ?, NOW())",
-              [k, -Math.abs(deduct), storedUnitId, 0]
+              "UPDATE nguyenlieu SET so_luong_ton = GREATEST(0, so_luong_ton - ?) WHERE ma_nguyen_lieu = ?",
+              [deduct, k]
             );
-            deductions.push({ ma_nguyen_lieu: k, deducted: deduct, before: warehouseMap[k] || 0 });
+            // we'll collect after values below
+            deductions.push({ ma_nguyen_lieu: k, deducted: deduct, before });
           }
 
-          // Fetch after-values for reporting
+          // Fetch after-values and unit/name for reporting
           if (deductions.length > 0) {
             const ids = deductions.map(d => d.ma_nguyen_lieu);
             const placeholders2 = ids.map(() => '?').join(',');
             const [afterRows] = await connection.query(
-              `SELECT n.ma_nguyen_lieu, nl.ten_nguyen_lieu, SUM( (nn.so_luong_nhap * COALESCE(di.he_so_quy_doi,1)) / COALESCE(ds.he_so_quy_doi,1) ) AS warehouse_qty
-               FROM nhapkho_nguyenlieu nn
-               LEFT JOIN donvi di ON nn.don_vi_id = di.id
-               LEFT JOIN nguyenlieu nl ON nn.ma_nguyen_lieu = nl.ma_nguyen_lieu
-               LEFT JOIN donvi ds ON nl.don_vi_id = ds.id
-               WHERE nn.ma_nguyen_lieu IN (${placeholders2})
-               GROUP BY nn.ma_nguyen_lieu, nl.ten_nguyen_lieu`,
+              `SELECT n.ma_nguyen_lieu, n.ten_nguyen_lieu, n.so_luong_ton, d.ten as don_vi
+               FROM nguyenlieu n LEFT JOIN donvi d ON n.don_vi_id = d.id
+               WHERE n.ma_nguyen_lieu IN (${placeholders2})`,
               ids
             );
             const afterMap = {};
             for (const r of afterRows) afterMap[r.ma_nguyen_lieu] = r;
+            // enrich deductions
             for (const dd of deductions) {
               const a = afterMap[dd.ma_nguyen_lieu] || {};
-              dd.after = Number(a.warehouse_qty || 0);
+              dd.after = Number(a.so_luong_ton || 0);
               dd.ten_nguyen_lieu = a.ten_nguyen_lieu || null;
+              dd.don_vi = a.don_vi || null;
             }
           }
         }
