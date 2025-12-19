@@ -6,7 +6,6 @@ import Dashboard from "./pages/Dashboard";
 import Products from "./pages/Products";
 import Customers from "./pages/Customers";
 import Orders from "./pages/Orders";
-import Warehouse from "./pages/Warehouse";
 import Inventory from "./pages/Inventory";
 import Statistics from "./pages/Statistics";
 import Ingredients from "./pages/Ingredients";
@@ -33,7 +32,6 @@ function InnerApp() {
               <Route path="/ingredients" element={<RequireAuth><Ingredients /></RequireAuth>} />
               <Route path="/recipes" element={<RequireAuth><Recipes /></RequireAuth>} />
               <Route path="/orders" element={<RequireAuth><Orders /></RequireAuth>} />
-              <Route path="/warehouse" element={<RequireAuth><Warehouse /></RequireAuth>} />
               <Route path="/inventory" element={<RequireAuth><Inventory /></RequireAuth>} />
               <Route path="/statistics" element={<RequireAuth><Statistics /></RequireAuth>} />
               <Route path="*" element={<RequireAuth><Dashboard /></RequireAuth>} />

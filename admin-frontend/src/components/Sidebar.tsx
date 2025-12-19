@@ -68,13 +68,7 @@ export default function Sidebar() {
           {!sidebarCollapsed && <span>Đơn hàng</span>}
         </Link>
 
-        {/* Nhập kho */}
-        <Link to="/warehouse" className={linkClass("/warehouse")}>
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className={`h-5 w-5 ${sidebarCollapsed ? "" : "mr-3"}`}>
-            <path d="M3 3h18v2H3V3zm2 6h14v10H5V9zm2 2v6h4v-6H7zm6-2l4 4 4-8-8 4z" />
-          </svg>
-          {!sidebarCollapsed && <span>Nhập kho</span>}
-        </Link>
+        {/* Nhập kho (removed) */}
 
         {/* Thống kê */}
         <Link to="/statistics" className={linkClass("/statistics")}>
