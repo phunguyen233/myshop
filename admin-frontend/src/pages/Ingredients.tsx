@@ -58,16 +58,15 @@ const Ingredients: React.FC = () => {
       return;
     }
 
-    try {
+      try {
       setAddLoading(true);
       if (editingId) {
-        // Try to update via PUT — backend may not support update; show error if it fails
         try {
-          await axiosClient.put(`/ingredients/${editingId}`, form);
+          await ingredientAPI.update(editingId, form);
           setSuccessMsg("Cập nhật nguyên liệu thành công!");
-        } catch (e) {
+        } catch (e: any) {
           console.error('Update failed', e);
-          alert('Backend chưa hỗ trợ cập nhật nguyên liệu.');
+          setAddError(e?.response?.data?.message || 'Lỗi khi cập nhật nguyên liệu');
         }
       } else {
         await ingredientAPI.add(form);
@@ -95,14 +94,13 @@ const Ingredients: React.FC = () => {
   const handleDelete = async (id: number) => {
     if (!window.confirm('Bạn chắc chắn muốn xóa nguyên liệu này?')) return;
     try {
-      // Try delete — backend may not provide delete endpoint
-      await axiosClient.delete(`/ingredients/${id}`);
+      await ingredientAPI.delete(id);
       const list = await ingredientAPI.getAll();
       setItems(list);
       alert('Xóa nguyên liệu thành công');
-    } catch (e) {
+    } catch (e: any) {
       console.error('Delete failed', e);
-      alert('Backend chưa hỗ trợ xóa nguyên liệu.');
+      alert(e?.response?.data?.message || 'Lỗi khi xóa nguyên liệu');
     }
   };
 
