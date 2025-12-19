@@ -15,6 +15,28 @@ export const getIngredients = async (req, res) => {
   }
 };
 
+// Trả về danh sách nguyên liệu kèm thông tin tổng nhập kho (warehouse) —
+// tổng số lượng đã nhập (quy về đơn vị lưu trữ) và tổng giá trị nhập.
+export const getIngredientsWarehouse = async (req, res) => {
+  try {
+    const [rows] = await db.query(
+      `SELECT nl.ma_nguyen_lieu, nl.ten_nguyen_lieu, nl.don_vi_id, d.ten as don_vi, nl.gia_nhap,
+              COALESCE(SUM(n.so_luong_nhap * COALESCE(din.he_so_quy_doi,1) / NULLIF(COALESCE(d.he_so_quy_doi,1),0)),0) AS warehouse_qty,
+              COALESCE(SUM(n.so_luong_nhap * n.don_gia),0) AS warehouse_value
+       FROM nguyenlieu nl
+       LEFT JOIN donvi d ON nl.don_vi_id = d.id
+       LEFT JOIN nhapkho_nguyenlieu n ON n.ma_nguyen_lieu = nl.ma_nguyen_lieu
+       LEFT JOIN donvi din ON n.don_vi_id = din.id
+       GROUP BY nl.ma_nguyen_lieu, nl.ten_nguyen_lieu, nl.don_vi_id, d.ten, nl.gia_nhap
+       ORDER BY nl.ten_nguyen_lieu`
+    );
+    res.json(rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Lỗi khi lấy dữ liệu kho nguyên liệu' });
+  }
+};
+
 export const addIngredient = async (req, res) => {
   try {
     const { ten_nguyen_lieu, so_luong_ton, don_vi_id, gia_nhap } = req.body;

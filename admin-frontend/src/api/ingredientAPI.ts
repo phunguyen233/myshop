@@ -20,6 +20,11 @@ export const ingredientAPI = {
   delete: async (id: number) => {
     const res = await axios.delete(`/ingredients/${id}`);
     return res.data;
+  },
+  // Get warehouse aggregated data for ingredients
+  getWarehouse: async () => {
+    const res = await axios.get(`/ingredients/warehouse`);
+    return res.data;
   }
 };
 

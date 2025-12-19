@@ -22,19 +22,23 @@ const Ingredients: React.FC = () => {
   const [viewMode, setViewMode] = useState<'ingredients' | 'warehouse'>('ingredients');
 
   useEffect(() => {
-    const fetch = async () => {
+    const refreshData = async () => {
       try {
-        const [u, ingr] = await Promise.all([unitAPI.getAll(), ingredientAPI.getAll()]);
+        const [u, ingr, wh] = await Promise.all([unitAPI.getAll(), ingredientAPI.getAll(), ingredientAPI.getWarehouse()]);
         setUnits(u || []);
-        setItems(ingr || []);
+        // merge warehouse info into ingredient items for easy rendering
+        const whMap: Record<string, any> = {};
+        (wh || []).forEach((w: any) => { whMap[w.ma_nguyen_lieu] = w; });
+        const merged = (ingr || []).map((it: any) => ({ ...it, __warehouse: whMap[it.ma_nguyen_lieu] || { warehouse_qty: 0, warehouse_value: 0 } }));
+        setItems(merged);
       } catch (err) {
         console.error(err);
       }
     };
-    fetch();
+    refreshData();
     const handler = (e: any) => {
-      // when orders deduct ingredients, refresh the list
-      fetch();
+      // when orders deduct ingredients or receipts change, refresh the list
+      refreshData();
     };
     window.addEventListener('ingredientsUpdated', handler);
     return () => window.removeEventListener('ingredientsUpdated', handler);
@@ -72,8 +76,13 @@ const Ingredients: React.FC = () => {
         await ingredientAPI.add(form);
         setSuccessMsg("Thêm nguyên liệu thành công!");
       }
+      // refresh merged data
+      const wh = await ingredientAPI.getWarehouse();
       const list = await ingredientAPI.getAll();
-      setItems(list);
+      const whMap: Record<string, any> = {};
+      (wh || []).forEach((w: any) => { whMap[w.ma_nguyen_lieu] = w; });
+      const merged = (list || []).map((it: any) => ({ ...it, __warehouse: whMap[it.ma_nguyen_lieu] || { warehouse_qty: 0, warehouse_value: 0 } }));
+      setItems(merged);
       setForm({ ten_nguyen_lieu: "", so_luong_ton: 0, don_vi_id: 0, gia_nhap: 0 });
       setEditingId(null);
       setTimeout(() => setSuccessMsg(""), 3000);
@@ -95,8 +104,12 @@ const Ingredients: React.FC = () => {
     if (!window.confirm('Bạn chắc chắn muốn xóa nguyên liệu này?')) return;
     try {
       await ingredientAPI.delete(id);
+      const wh = await ingredientAPI.getWarehouse();
       const list = await ingredientAPI.getAll();
-      setItems(list);
+      const whMap: Record<string, any> = {};
+      (wh || []).forEach((w: any) => { whMap[w.ma_nguyen_lieu] = w; });
+      const merged = (list || []).map((it: any) => ({ ...it, __warehouse: whMap[it.ma_nguyen_lieu] || { warehouse_qty: 0, warehouse_value: 0 } }));
+      setItems(merged);
       alert('Xóa nguyên liệu thành công');
     } catch (e: any) {
       console.error('Delete failed', e);
@@ -128,10 +141,13 @@ const Ingredients: React.FC = () => {
         so_luong_nhap: receipt.so_luong_nhap, 
         don_vi_id: receipt.don_vi_id
       });
-      // Backend now updates ingredient stock and `gia_nhap` on receipt; just refresh list
-
+      // refresh merged data (warehouse aggregation)
+      const wh = await ingredientAPI.getWarehouse();
       const list = await ingredientAPI.getAll();
-      setItems(list);
+      const whMap: Record<string, any> = {};
+      (wh || []).forEach((w: any) => { whMap[w.ma_nguyen_lieu] = w; });
+      const merged = (list || []).map((it: any) => ({ ...it, __warehouse: whMap[it.ma_nguyen_lieu] || { warehouse_qty: 0, warehouse_value: 0 } }));
+      setItems(merged);
       setReceipt({ ma_nguyen_lieu: 0, so_luong_nhap: 0, don_vi_id: 0, don_gia: 0 });
       setShowReceiptModal(false);
       setSuccessMsg("Nhập kho nguyên liệu thành công!");
@@ -290,11 +306,13 @@ const Ingredients: React.FC = () => {
                       <td colSpan={6} className="p-4 text-center text-muted-foreground">Chưa có dữ liệu kho</td>
                     </tr>
                   ) : (
+                    // Kho view: lấy dữ liệu tổng nhập kho từ endpoint mới
+                    // `ingredientAPI.getWarehouse()` trả về hàng với fields: ma_nguyen_lieu, ten_nguyen_lieu, don_vi_id, don_vi, gia_nhap, warehouse_qty, warehouse_value
                     items.filter(i => !search || i.ten_nguyen_lieu.toLowerCase().includes(search.toLowerCase())).map(i => {
+                      const wh = i.__warehouse || { warehouse_qty: 0, warehouse_value: 0 };
                       const storedUnit = units.find(u => u.id === i.don_vi_id) || { he_so_quy_doi: 1, ten: '' };
-                      const qty = Number(i.so_luong_ton) || 0;
-                      const qtyInKg = qty * (Number(storedUnit.he_so_quy_doi) || 1);
-                      const value = qtyInKg * (Number(i.gia_nhap) || 0);
+                      const qty = Number(wh.warehouse_qty) || 0;
+                      const value = Number(wh.warehouse_value) || 0;
                       return (
                         <tr key={i.ma_nguyen_lieu} className="hover:bg-muted/50 transition-colors">
                           <td className="p-3 text-foreground">{i.ma_nguyen_lieu}</td>
