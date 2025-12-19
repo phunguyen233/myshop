@@ -70,7 +70,20 @@ const Dashboard: React.FC = () => {
       try {
         const ev = e as CustomEvent;
         const d = ev?.detail || {};
-        if (d && (d.orderCompletedAmount || d.orderRevertedAmount || d.inventoryAdded)) {
+        if (d && (d.orderCompletedAmount || d.orderRevertedAmount || d.inventoryAdded || d.inventoryTotal !== undefined)) {
+          // prefer authoritative total from event when provided
+          if (typeof d.inventoryTotal !== 'undefined') {
+            const invTot = Number(d.inventoryTotal || 0);
+            setTotalInventoryCost(invTot);
+            setProfit((prev) => {
+              const newProfit = totalRevenue - invTot;
+              return newProfit;
+            });
+            // also refetch in background to fully sync
+            setTimeout(() => { fetchData(); }, 200);
+            return;
+          }
+
           // compute new totals based on previous values and the delta in the event
           setTotalRevenue((prevRevenue) => {
             const inc = Number(d.orderCompletedAmount || 0);

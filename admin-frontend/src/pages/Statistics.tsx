@@ -76,6 +76,27 @@ export default function StatisticsPage() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    const handler = (e: any) => {
+      try {
+        const d = e?.detail || {};
+        // if server provided an aggregate inventory total, just refresh the statistics
+        if (typeof d.inventoryTotal !== 'undefined') {
+          // refresh the current selection
+          fetchStatistics();
+        } else if (typeof d.inventoryAdded !== 'undefined') {
+          // small delta arrived — refresh to keep everything consistent
+          fetchStatistics();
+        }
+      } catch (err) {
+        console.error('statsUpdated handler on Statistics failed', err);
+        fetchStatistics();
+      }
+    };
+    window.addEventListener('statsUpdated', handler as EventListener);
+    return () => window.removeEventListener('statsUpdated', handler as EventListener);
+  }, []);
   
   const handleQuickFilter = (days: number) => {
     const today = new Date();
