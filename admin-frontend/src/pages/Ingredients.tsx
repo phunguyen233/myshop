@@ -17,28 +17,32 @@ const Ingredients: React.FC = () => {
   const [successMsg, setSuccessMsg] = useState("");
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [editFromWarehouse, setEditFromWarehouse] = useState(false);
+  const [warehouseEditQty, setWarehouseEditQty] = useState<number>(0);
+  const [warehouseEditUnitId, setWarehouseEditUnitId] = useState<number>(0);
+  const [currentWarehouseItem, setCurrentWarehouseItem] = useState<any | null>(null);
   const [showReceiptModal, setShowReceiptModal] = useState(false);
   const [search, setSearch] = useState("");
   const [viewMode, setViewMode] = useState<'ingredients' | 'warehouse'>('ingredients');
+  const refreshMergedData = async () => {
+    try {
+      const [u, ingr, wh] = await Promise.all([unitAPI.getAll(), ingredientAPI.getAll(), ingredientAPI.getWarehouse()]);
+      setUnits(u || []);
+      // merge warehouse info into ingredient items for easy rendering
+      const whMap: Record<string, any> = {};
+      (wh || []).forEach((w: any) => { whMap[w.ma_nguyen_lieu] = w; });
+      const merged = (ingr || []).map((it: any) => ({ ...it, __warehouse: whMap[it.ma_nguyen_lieu] || { warehouse_qty: 0, warehouse_value: 0 } }));
+      setItems(merged);
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   useEffect(() => {
-    const refreshData = async () => {
-      try {
-        const [u, ingr, wh] = await Promise.all([unitAPI.getAll(), ingredientAPI.getAll(), ingredientAPI.getWarehouse()]);
-        setUnits(u || []);
-        // merge warehouse info into ingredient items for easy rendering
-        const whMap: Record<string, any> = {};
-        (wh || []).forEach((w: any) => { whMap[w.ma_nguyen_lieu] = w; });
-        const merged = (ingr || []).map((it: any) => ({ ...it, __warehouse: whMap[it.ma_nguyen_lieu] || { warehouse_qty: 0, warehouse_value: 0 } }));
-        setItems(merged);
-      } catch (err) {
-        console.error(err);
-      }
-    };
-    refreshData();
+    refreshMergedData();
     const handler = (e: any) => {
       // when orders deduct ingredients or receipts change, refresh the list
-      refreshData();
+      refreshMergedData();
     };
     window.addEventListener('ingredientsUpdated', handler);
     return () => window.removeEventListener('ingredientsUpdated', handler);
@@ -94,9 +98,20 @@ const Ingredients: React.FC = () => {
     }
   };
 
-  const handleEdit = (item: any) => {
+  const handleEdit = (item: any, fromWarehouse: boolean = false) => {
     setEditingId(item.ma_nguyen_lieu);
+    setEditFromWarehouse(!!fromWarehouse);
     setForm({ ten_nguyen_lieu: item.ten_nguyen_lieu, so_luong_ton: item.so_luong_ton || 0, don_vi_id: item.don_vi_id || 0, gia_nhap: item.gia_nhap || 0 });
+    if (fromWarehouse) {
+      const whQty = (item.__warehouse && Number(item.__warehouse.warehouse_qty)) || 0;
+      setWarehouseEditQty(whQty);
+      setWarehouseEditUnitId(item.don_vi_id || 0);
+      setCurrentWarehouseItem(item);
+    } else {
+      setWarehouseEditQty(0);
+      setWarehouseEditUnitId(0);
+      setCurrentWarehouseItem(null);
+    }
     setShowEditModal(true);
   };
 
@@ -291,7 +306,7 @@ const Ingredients: React.FC = () => {
             <div className="overflow-x-auto rounded-lg border border-border">
               <table className="w-full text-left text-sm">
                 <thead className="bg-muted/50 text-muted-foreground">
-                  <tr>
+                    <tr>
                     <th className="p-3 font-medium">Mã</th>
                     <th className="p-3 font-medium">Tên nguyên liệu</th>
                     <th className="p-3 font-medium text-right">Số lượng</th>
@@ -319,10 +334,18 @@ const Ingredients: React.FC = () => {
                           <td className="p-3 text-foreground font-medium">{i.ten_nguyen_lieu}</td>
                           <td className="p-3 text-right text-foreground">{fmtQty(qty)} {storedUnit.ten}</td>
                           <td className="p-3 text-foreground">{storedUnit.ten}</td>
-                          <td className="p-3 text-right text-foreground">{Number(value || 0).toLocaleString('vi-VN')}₫</td>
+                          <td className="p-3 text-right text-foreground">
+                            {(() => {
+                              const masterQty = Number(i.so_luong_ton) || 0;
+                              const masterTotalPrice = Number(i.gia_nhap) || 0;
+                              const warehouseQty = Number(wh.warehouse_qty) || 0;
+                              const computed = masterQty > 0 ? (warehouseQty / masterQty) * masterTotalPrice : 0;
+                              return Number(computed || 0).toLocaleString('vi-VN') + '₫';
+                            })()}
+                          </td>
                           <td className="p-3 text-center">
                             <div className="flex items-center justify-center gap-2">
-                              <button onClick={() => handleEdit(i)} className="px-3 py-1 rounded bg-white border border-border hover:bg-green-600 hover:text-white text-foreground text-xs">Sửa</button>
+                              <button onClick={() => handleEdit(i, true)} className="px-3 py-1 rounded bg-white border border-border hover:bg-green-600 hover:text-white text-foreground text-xs">Sửa</button>
                               <button onClick={() => handleDelete(i.ma_nguyen_lieu)} className="px-3 py-1 rounded bg-white border border-border hover:bg-red-600 hover:text-white text-foreground text-xs">Xóa</button>
                             </div>
                           </td>
@@ -378,35 +401,83 @@ const Ingredients: React.FC = () => {
       {/* Edit Modal */}
       {showEditModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div className="absolute inset-0 bg-black/40" onClick={() => setShowEditModal(false)} />
+          <div className="absolute inset-0 bg-black/40" onClick={() => { setShowEditModal(false); setEditFromWarehouse(false); }} />
           <div className="bg-white rounded shadow-lg p-6 z-10 w-full max-w-md">
             <h3 className="text-lg font-semibold mb-4">Sửa nguyên liệu</h3>
             {addError && <div className="bg-red-100 border border-red-400 text-red-700 px-3 py-2 rounded mb-3 text-sm">{addError}</div>}
             <div className="space-y-3">
               <div>
                 <label className="block text-sm font-medium mb-1">Tên nguyên liệu</label>
-                <input value={form.ten_nguyen_lieu} onChange={e => setForm({ ...form, ten_nguyen_lieu: e.target.value })} className="w-full border border-input rounded px-3 py-2 text-sm" />
+                {editFromWarehouse ? (
+                  <div className="w-full border border-input rounded px-3 py-2 text-sm bg-gray-50">{form.ten_nguyen_lieu}</div>
+                ) : (
+                  <input value={form.ten_nguyen_lieu} onChange={e => setForm({ ...form, ten_nguyen_lieu: e.target.value })} className="w-full border border-input rounded px-3 py-2 text-sm" />
+                )}
               </div>
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="block text-sm font-medium mb-1">Số lượng</label>
-                  <input type="number" min={0} value={form.so_luong_ton} onChange={e => setForm({ ...form, so_luong_ton: Number(e.target.value) })} className="w-full border border-input rounded px-3 py-2 text-sm" />
+              {editFromWarehouse ? (
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Số lượng (kho)</label>
+                    <input type="number" min={0} step="0.0001" value={warehouseEditQty} onChange={e => setWarehouseEditQty(Number(e.target.value))} className="w-full border border-input rounded px-3 py-2 text-sm" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Đơn vị</label>
+                    <select value={warehouseEditUnitId} onChange={e => setWarehouseEditUnitId(Number(e.target.value))} className="w-full border border-input rounded px-3 py-2 text-sm">
+                      <option value={0}>Chọn đơn vị</option>
+                      {units.map(u => <option key={u.id} value={u.id}>{u.ten}</option>)}
+                    </select>
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">Đơn vị</label>
-                  <select value={form.don_vi_id} onChange={e => setForm({ ...form, don_vi_id: Number(e.target.value) })} className="w-full border border-input rounded px-3 py-2 text-sm">
-                    <option value={0}>Chọn đơn vị</option>
-                    {units.map(u => <option key={u.id} value={u.id}>{u.ten}</option>)}
-                  </select>
+              ) : (
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Số lượng</label>
+                    <input type="number" min={0} value={form.so_luong_ton} onChange={e => setForm({ ...form, so_luong_ton: Number(e.target.value) })} className="w-full border border-input rounded px-3 py-2 text-sm" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Đơn vị</label>
+                    <select value={form.don_vi_id} onChange={e => setForm({ ...form, don_vi_id: Number(e.target.value) })} className="w-full border border-input rounded px-3 py-2 text-sm">
+                      <option value={0}>Chọn đơn vị</option>
+                      {units.map(u => <option key={u.id} value={u.id}>{u.ten}</option>)}
+                    </select>
+                  </div>
                 </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">Giá tổng (VNĐ) — cho số lượng hiện tại</label>
-                <input type="number" min={0} step="0.01" value={form.gia_nhap} onChange={e => setForm({ ...form, gia_nhap: Number(e.target.value) })} className="w-full border border-input rounded px-3 py-2 text-sm" />
-              </div>
+              )}
+              {!editFromWarehouse && (
+                <div>
+                  <label className="block text-sm font-medium mb-1">Giá tổng (VNĐ) — cho số lượng hiện tại</label>
+                  <input type="number" min={0} step="0.01" value={form.gia_nhap} onChange={e => setForm({ ...form, gia_nhap: Number(e.target.value) })} className="w-full border border-input rounded px-3 py-2 text-sm" />
+                </div>
+              )}
               <div className="flex gap-2 justify-end">
-                <button className="px-4 py-2 rounded border" onClick={() => setShowEditModal(false)}>Hủy</button>
-                <button onClick={async () => { await handleAdd(); setShowEditModal(false); }} className="px-4 py-2 rounded bg-blue-600 text-white">Lưu</button>
+                <button className="px-4 py-2 rounded border" onClick={() => { setShowEditModal(false); setEditFromWarehouse(false); setCurrentWarehouseItem(null); }}>Hủy</button>
+                <button onClick={async () => {
+                    try {
+                      if (editFromWarehouse && currentWarehouseItem) {
+                        const prevQty = (currentWarehouseItem.__warehouse && Number(currentWarehouseItem.__warehouse.warehouse_qty)) || 0;
+                        const newQty = Number(warehouseEditQty) || 0;
+                        const delta = newQty - prevQty;
+                        if (delta !== 0) {
+                          // create an adjustment receipt in warehouse to reflect change
+                          await receiptAPI.add(currentWarehouseItem.ma_nguyen_lieu, { so_luong_nhap: delta, don_vi_id: warehouseEditUnitId });
+                        }
+                        // refresh data
+                        await refreshMergedData();
+                        setShowEditModal(false);
+                        setEditFromWarehouse(false);
+                        setCurrentWarehouseItem(null);
+                        return;
+                      }
+                      // not a warehouse-edit: save master ingredient
+                      await handleAdd();
+                      setShowEditModal(false);
+                      setEditFromWarehouse(false);
+                      setCurrentWarehouseItem(null);
+                    } catch (e:any) {
+                      console.error(e);
+                      alert(e?.response?.data?.message || 'Lỗi khi lưu thay đổi');
+                    }
+                  }} className="px-4 py-2 rounded bg-blue-600 text-white">Lưu</button>
               </div>
             </div>
           </div>

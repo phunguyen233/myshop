@@ -254,7 +254,7 @@ const Recipes: React.FC = () => {
                 return name.includes(q) || String(pid).includes(q);
               })
               .map(([productId, info]: any) => {
-              const total = (info.items || []).reduce((s: number, it: any) => s + (Number(it.cost_per_line) || 0), 0);
+              const total = (info.items || []).reduce((s: number, it: any) => s + Math.round(computeLineCost({ ma_nguyen_lieu: it.ma_nguyen_lieu, so_luong_can: it.so_luong_can, don_vi_id: it.don_vi_id } ) || 0), 0);
               return (
                 <div key={productId} className="mb-4 border border-border rounded p-3">
                   <div className="flex items-center justify-between">
@@ -285,7 +285,7 @@ const Recipes: React.FC = () => {
                                 </div>
                               </div>
                               <div className="text-right flex flex-col items-end gap-2">
-                                <div className="font-medium">{(Number(it.cost_per_line) || 0).toString()}₫</div>
+                                  <div className="font-medium">{Math.round(computeLineCost({ ma_nguyen_lieu: it.ma_nguyen_lieu, so_luong_can: it.so_luong_can, don_vi_id: it.don_vi_id }) || 0).toLocaleString('vi-VN')}₫</div>
                                 <button onClick={() => openReceiptModal(it.ma_nguyen_lieu)} className="px-2 py-1 text-xs bg-indigo-600 text-white rounded">Nhập kho</button>
                               </div>
                             </li>
