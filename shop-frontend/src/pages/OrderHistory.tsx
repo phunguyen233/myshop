@@ -9,6 +9,7 @@ export default function OrderHistory() {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [selectedOrder, setSelectedOrder] = useState<any | null>(null);
+  const [isAuth, setIsAuth] = useState<boolean>(true);
   const navigate = useNavigate();
   const location = useLocation();
   const [infoModal, setInfoModal] = useState<string | null>((location.state as any)?.infoModal || null);
@@ -36,10 +37,11 @@ export default function OrderHistory() {
     const token = localStorage.getItem("token");
     const userRaw = localStorage.getItem("user");
     if (!token || !userRaw) {
-      alert('Vui lòng đăng nhập để xem đơn hàng');
-      navigate('/auth');
+      setIsAuth(false);
+      setOrders([]);
       return;
     }
+    setIsAuth(true);
     const user = JSON.parse(userRaw);
     try {
       setLoading(true);
@@ -65,8 +67,7 @@ export default function OrderHistory() {
   const handleViewDetail = async (ma_don_hang: number | string) => {
     const token = localStorage.getItem("token");
     if (!token) {
-      alert('Vui lòng đăng nhập để xem chi tiết');
-      navigate('/auth');
+      setIsAuth(false);
       return;
     }
     try {
@@ -89,6 +90,9 @@ export default function OrderHistory() {
   return (
     <div className="p-6">
       <h1 className="text-2xl font-semibold mb-4">Đơn hàng của bạn</h1>
+      {!isAuth && (
+        <div className="p-6 bg-yellow-50 border-l-4 border-yellow-300 text-yellow-800 rounded mb-4">Đăng nhập để thấy đơn hàng của bạn</div>
+      )}
       {/* Info modal shown when navigated from payment modal */}
       {infoModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
@@ -113,7 +117,7 @@ export default function OrderHistory() {
       ) : errorMsg ? (
         <p className="text-red-600">{errorMsg}</p>
       ) : orders.length === 0 ? (
-        <p>Bạn chưa đặt đơn hàng nào.</p>
+        <p>{isAuth ? 'Bạn chưa đặt đơn hàng nào.' : 'Chưa có dữ liệu.'}</p>
       ) : (
         <div className="space-y-4">
           {orders.map((o) => (
