@@ -72,15 +72,14 @@ export default function ShopProducts() {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Tìm sản phẩm..."
-          style={{height:35, width: 600, borderRadius: 28, marginBottom: 30 }}
-          className=" p-4 border border-gray-300 shadow-lg text-sm"
+          className="p-4 border border-gray-300 shadow-lg text-sm w-full max-w-xl rounded-full"
           aria-label="Tìm sản phẩm"
         />
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 350px)", gap: 16, justifyContent: "center" }}>
+      <div className="grid gap-4 justify-items-center grid-cols-1 sm:grid-cols-2 md:grid-cols-3">
         {filteredProducts.map((p) => (
-          <div key={p.id} style={{ padding: 4, width: 350 }}>
+          <div key={p.id} className="p-2 w-full max-w-xs">
             <div
               onMouseEnter={() => setHoveredId(p.id)}
               onMouseLeave={() => setHoveredId(null)}
@@ -90,7 +89,7 @@ export default function ShopProducts() {
                 display: "flex",
                 flexDirection: "column",
                 justifyContent: "space-between",
-                transform: hoveredId === p.id ? "translateY(-6px)" : "none", 
+                transform: hoveredId === p.id ? "translateY(-6px)" : "none",
                 boxShadow: hoveredId === p.id ? "0px 10px 20px rgba(0,0,0,0.12)" : undefined,
                 transition: "transform 150ms ease, box-shadow 250ms ease",
               }}

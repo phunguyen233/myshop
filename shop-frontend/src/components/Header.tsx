@@ -41,10 +41,16 @@ export default function Header() {
   };
 
   const menuRef = useRef<HTMLDivElement | null>(null);
+  const mobileMenuRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+      const target = e.target as Node;
+      if (menuRef.current && !menuRef.current.contains(target)) {
+        setShowMenu(false);
+      }
+      if (mobileMenuRef.current && !mobileMenuRef.current.contains(target)) {
+        // close mobile nav if clicked outside
         setShowMenu(false);
       }
     };
@@ -68,6 +74,11 @@ export default function Header() {
       </nav>
 
       <div className="header-right">
+        <button className="mobile-menu-btn" onClick={() => setShowMenu(s => !s)} aria-label="Mở menu">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M3 6h18M3 12h18M3 18h18" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        </button>
         <button className="icon-btn" onClick={() => navigate('/cart')} title="Giỏ hàng">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M6 6H21L20 14H8L6 6Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
@@ -100,6 +111,38 @@ export default function Header() {
             </svg>
           </button>
         )}
+      </div>
+
+      {/* Mobile navigation dropdown (renders under header) */}
+      <div
+        className={`mobile-nav ${showMenu ? "open" : "closed"}`}
+        ref={mobileMenuRef}
+        aria-hidden={!showMenu}
+      >
+        <Link to="/" className="mobile-nav-link" onClick={() => setShowMenu(false)}>Trang chủ</Link>
+        <Link to="/products" className="mobile-nav-link" onClick={() => setShowMenu(false)}>Sản phẩm</Link>
+        <Link to="/about" className="mobile-nav-link" onClick={() => setShowMenu(false)}>Giới thiệu</Link>
+        <Link to="/contact" className="mobile-nav-link" onClick={() => setShowMenu(false)}>Liên hệ</Link>
+        <Link to="/branches" className="mobile-nav-link" onClick={() => setShowMenu(false)}>Chi nhánh</Link>
+
+        <div className="border-t border-gray-100 mt-2 pt-2 flex gap-2">
+          <Link to="/cart" className="mobile-nav-link icon-link" onClick={() => setShowMenu(false)}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M6 6H21L20 14H8L6 6Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+              <circle cx="10" cy="19" r="1" fill="currentColor"/>
+              <circle cx="18" cy="19" r="1" fill="currentColor"/>
+            </svg>
+            <span>Giỏ hàng</span>
+          </Link>
+
+          <Link to="/auth" className="mobile-nav-link icon-link" onClick={() => setShowMenu(false)}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M20 21V19C20 16.7909 18.2091 15 16 15H8C5.79086 15 4 16.7909 4 19V21" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+              <circle cx="12" cy="8" r="3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+            <span>Tài khoản</span>
+          </Link>
+        </div>
       </div>
     </header>
   );
