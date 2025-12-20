@@ -42,10 +42,13 @@ export default function Header() {
 
   const menuRef = useRef<HTMLDivElement | null>(null);
   const mobileMenuRef = useRef<HTMLDivElement | null>(null);
+  const mobileBtnRef = useRef<HTMLButtonElement | null>(null);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       const target = e.target as Node;
+      // ignore clicks on the mobile menu button itself to avoid immediate close
+      if (mobileBtnRef.current && mobileBtnRef.current.contains(target)) return;
       if (menuRef.current && !menuRef.current.contains(target)) {
         setShowMenu(false);
       }
@@ -74,7 +77,7 @@ export default function Header() {
       </nav>
 
       <div className="header-right">
-        <button className="mobile-menu-btn" onClick={() => setShowMenu(s => !s)} aria-label="Mở menu">
+        <button ref={mobileBtnRef} className="mobile-menu-btn" onClick={() => setShowMenu(s => !s)} aria-label="Mở menu" aria-expanded={showMenu}>
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M3 6h18M3 12h18M3 18h18" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
@@ -117,6 +120,7 @@ export default function Header() {
       <div
         className={`mobile-nav ${showMenu ? "open" : "closed"}`}
         ref={mobileMenuRef}
+        role="menu"
         aria-hidden={!showMenu}
       >
         <Link to="/" className="mobile-nav-link" onClick={() => setShowMenu(false)}>Trang chủ</Link>
