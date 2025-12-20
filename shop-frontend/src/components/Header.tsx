@@ -7,6 +7,8 @@ export default function Header() {
   const navigate = useNavigate();
   const [user, setUser] = useState<any>(null);
   const [showMenu, setShowMenu] = useState(false);
+  const [showMobileNav, setShowMobileNav] = useState(false);
+  const [showUserMenu, setShowUserMenu] = useState(false);
 
   useEffect(() => {
     const raw = localStorage.getItem("user");
@@ -47,14 +49,12 @@ export default function Header() {
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       const target = e.target as Node;
-      // ignore clicks on the mobile menu button itself to avoid immediate close
       if (mobileBtnRef.current && mobileBtnRef.current.contains(target)) return;
       if (menuRef.current && !menuRef.current.contains(target)) {
-        setShowMenu(false);
+        setShowUserMenu(false);
       }
       if (mobileMenuRef.current && !mobileMenuRef.current.contains(target)) {
-        // close mobile nav if clicked outside
-        setShowMenu(false);
+        setShowMobileNav(false);
       }
     };
     document.addEventListener('click', handleClickOutside);
@@ -77,7 +77,7 @@ export default function Header() {
       </nav>
 
       <div className="header-right">
-        <button ref={mobileBtnRef} className="mobile-menu-btn" onClick={() => setShowMenu(s => !s)} aria-label="Mở menu" aria-expanded={showMenu}>
+        <button ref={mobileBtnRef} className="mobile-menu-btn" onClick={() => { setShowMobileNav(s => !s); setShowUserMenu(false); }} aria-label="Mở menu" aria-expanded={showMobileNav}>
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M3 6h18M3 12h18M3 18h18" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
@@ -92,17 +92,17 @@ export default function Header() {
 
         {user ? (
           <div className="relative" ref={menuRef}>
-            <button onClick={() => setShowMenu(s => !s)} className="px-3 py-1 rounded bg-white border border-gray-200 hover:shadow-sm flex items-center gap-2">
+            <button onClick={() => { setShowUserMenu(s => !s); setShowMobileNav(false); }} className="px-3 py-1 rounded bg-white border border-gray-200 hover:shadow-sm flex items-center gap-2" aria-expanded={showUserMenu} aria-haspopup="menu">
               <span className="text-sm font-medium">{user.ho_ten || user.ten_dang_nhap}</span>
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
             </button>
 
-            {showMenu && (
-              <div className="absolute right-0 mt-2 w-40 bg-white border rounded shadow-lg py-2 z-40">
-                <button onClick={() => { navigate('/orders-history'); setShowMenu(false); }} className="w-full text-left px-4 py-2 hover:bg-gray-100">Đơn hàng</button>
-                <button onClick={() => { handleLogout(); setShowMenu(false); }} className="w-full text-left px-4 py-2 hover:bg-gray-100">Đăng xuất</button>
+            {showUserMenu && (
+              <div className="absolute right-0 mt-2 w-40 bg-white border rounded shadow-lg py-2 z-40" role="menu">
+                <button onClick={() => { navigate('/orders-history'); setShowUserMenu(false); }} className="w-full text-left px-4 py-2 hover:bg-gray-100">Đơn hàng</button>
+                <button onClick={() => { handleLogout(); setShowUserMenu(false); }} className="w-full text-left px-4 py-2 hover:bg-gray-100">Đăng xuất</button>
               </div>
             )}
           </div>
@@ -118,10 +118,10 @@ export default function Header() {
 
       {/* Mobile navigation dropdown (renders under header) */}
       <div
-        className={`mobile-nav ${showMenu ? "open" : "closed"}`}
+        className={`mobile-nav ${showMobileNav ? "open" : "closed"}`}
         ref={mobileMenuRef}
         role="menu"
-        aria-hidden={!showMenu}
+        aria-hidden={!showMobileNav}
       >
         <Link to="/" className="mobile-nav-link" onClick={() => setShowMenu(false)}>Trang chủ</Link>
         <Link to="/products" className="mobile-nav-link" onClick={() => setShowMenu(false)}>Sản phẩm</Link>
