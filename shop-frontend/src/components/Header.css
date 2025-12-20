@@ -63,7 +63,8 @@
 @media (max-width: 768px){
   .site-header{ padding:10px 12px; }
   .header-center{ display:none }
-  .header-name{ display:none }
+  /* keep site name visible on mobile, but compact it */
+  .header-name{ display:block; font-size:14px; max-width:140px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
   .header-logo{ width:36px; height:36px }
   .mobile-menu-btn{ display:block }
 
