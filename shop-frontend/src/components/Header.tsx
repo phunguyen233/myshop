@@ -130,7 +130,7 @@ export default function Header() {
         <Link to="/branches" className="mobile-nav-link" onClick={() => setShowMenu(false)}>Chi nhánh</Link>
         <Link to="/orders-history" className="mobile-nav-link" onClick={() => setShowMenu(false)}>Đơn hàng</Link>
 
-        <div className="border-t border-gray-100 mt-2 pt-2 flex flex-col gap-2">
+        <div className="border-t border-gray-100 mt-2 pt-2 mobile-top-row">
           <Link to="/cart" className="mobile-nav-link icon-link" onClick={() => setShowMenu(false)}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M6 6H21L20 14H8L6 6Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
@@ -139,18 +139,12 @@ export default function Header() {
             </svg>
             <span>Giỏ hàng</span>
           </Link>
-          {/* If user is logged in show name + logout, otherwise link to auth */}
+
           {user ? (
-            <div className="mobile-nav-user mobile-nav-link flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M20 21V19C20 16.7909 18.2091 15 16 15H8C5.79086 15 4 16.7909 4 19V21" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                  <circle cx="12" cy="8" r="3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-                <span className="font-semibold">{user.ho_ten || user.ten_dang_nhap}</span>
-              </div>
-              <button onClick={() => { handleLogout(); setShowMenu(false); }} className="px-3 py-1 bg-red-50 text-red-600 rounded">Đăng xuất</button>
-            </div>
+            <>
+              <div className="mobile-username">{user.ho_ten || user.ten_dang_nhap}</div>
+              <button onClick={() => { handleLogout(); setShowMenu(false); }} className="mobile-logout-btn">Đăng xuất</button>
+            </>
           ) : (
             <Link to="/auth" className="mobile-nav-link icon-link" onClick={() => setShowMenu(false)}>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
