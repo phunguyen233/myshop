@@ -95,8 +95,9 @@ export const getStatistics = async (req, res) => {
 
     if (String(full).toLowerCase() === 'true') {
       const [ordersList] = await db.query(
-        `SELECT d.ma_don_hang, d.ma_khach_hang, d.ten_nguoi_nhan, d.so_dien_thoai_nhan, d.dia_chi_nhan, d.tong_tien, d.trang_thai,
-        DATE_FORMAT(DATE_ADD(d.thoi_gian_mua, INTERVAL 7 HOUR), '%Y-%m-%d %H:%i:%s') AS thoi_gian_mua
+        `SELECT d.ma_don_hang, d.ma_khach_hang, d.so_dien_thoai_nhan, d.dia_chi_nhan, d.tong_tien, d.tien_ship, d.trang_thai,
+        DATE_FORMAT(DATE_ADD(d.thoi_gian_mua, INTERVAL 7 HOUR), '%Y-%m-%d %H:%i:%s') AS thoi_gian_mua,
+        DATE_FORMAT(DATE_ADD(d.thoi_gian_giao, INTERVAL 7 HOUR), '%Y-%m-%d %H:%i:%s') AS thoi_gian_giao
         FROM donhang d
         WHERE DATE(DATE_ADD(d.thoi_gian_mua, INTERVAL 7 HOUR)) BETWEEN ? AND ? 
         AND d.trang_thai = 'hoan_tat'

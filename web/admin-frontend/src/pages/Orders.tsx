@@ -17,11 +17,11 @@ const Orders: React.FC = () => {
 
     // add order form state
     const [selectedCustomer, setSelectedCustomer] = useState<number | undefined>(undefined);
-    const [recipientName, setRecipientName] = useState("");
+    // recipient name removed from schema
     const [recipientPhone, setRecipientPhone] = useState("");
     const [recipientAddress, setRecipientAddress] = useState("");
     const [orderItems, setOrderItems] = useState<Array<{ ma_san_pham: number; ten_san_pham?: string; so_luong: number; don_gia: number }>>([]);
-    const [orderFieldErrors, setOrderFieldErrors] = useState<{ customer?: string; items?: string; name?: string; phone?: string; address?: string }>({});
+    const [orderFieldErrors, setOrderFieldErrors] = useState<{ customer?: string; items?: string; phone?: string; address?: string }>({});
 
     // Use enum values from your DB: 'cho_xu_ly','da_thanh_toan','dang_giao','hoan_tat','huy'
     const statuses = ["cho_xu_ly", "da_thanh_toan", "dang_giao", "hoan_tat", "huy"];
@@ -81,7 +81,6 @@ const Orders: React.FC = () => {
     const openAddModal = async () => {
         await Promise.all([fetchCustomers(), fetchProducts()]);
         setSelectedCustomer(undefined);
-        setRecipientName("");
         setRecipientPhone("");
         setOrderItems([]);
         setShowAddModal(true);
@@ -111,10 +110,9 @@ const Orders: React.FC = () => {
 
     const handleCreateOrder = async () => {
         // client-side validation
-        const errs: { customer?: string; items?: string; name?: string; phone?: string; address?: string } = {};
+        const errs: { customer?: string; items?: string; phone?: string; address?: string } = {};
         if (!selectedCustomer) errs.customer = 'Vui lòng chọn khách hàng';
         if (!orderItems || orderItems.length === 0) errs.items = 'Vui lòng thêm ít nhất một sản phẩm';
-        if (!recipientName || !recipientName.trim()) errs.name = 'Vui lòng nhập tên người nhận';
         const phoneRe = /^[0-9\+\-\s]{7,20}$/;
         if (!recipientPhone || !phoneRe.test(recipientPhone)) errs.phone = 'Số điện thoại người nhận không hợp lệ';
         if (!recipientAddress || !recipientAddress.trim()) errs.address = 'Vui lòng nhập địa chỉ nhận';
@@ -128,7 +126,7 @@ const Orders: React.FC = () => {
 
         try {
             const chi_tiet = orderItems.map(it => ({ ma_san_pham: it.ma_san_pham, so_luong: it.so_luong, don_gia: it.don_gia }));
-            const payload: any = { ma_khach_hang: selectedCustomer, ten_nguoi_nhan: recipientName || null, so_dien_thoai_nhan: recipientPhone || null, dia_chi_nhan: recipientAddress || null, tong_tien: computeTotal(), chi_tiet };
+            const payload: any = { ma_khach_hang: selectedCustomer, so_dien_thoai_nhan: recipientPhone || null, dia_chi_nhan: recipientAddress || null, tong_tien: computeTotal(), chi_tiet };
             await orderAPI.create(payload);
             alert('Tạo đơn hàng thành công');
             setShowAddModal(false);
@@ -277,10 +275,11 @@ const Orders: React.FC = () => {
                                 <tr>
                                     <th className="p-4 font-medium">Mã đơn</th>
                                     <th className="p-4 font-medium">Khách</th>
-                                    <th className="p-4 font-medium">Người nhận</th>
                                     <th className="p-4 font-medium">SĐT nhận</th>
-                                    <th className="p-4 font-medium">Thời gian</th>
+                                    <th className="p-4 font-medium">Thời gian mua</th>
+                                    <th className="p-4 font-medium">Thời gian giao</th>
                                     <th className="p-4 font-medium">Tổng tiền</th>
+                                    <th className="p-4 font-medium">Tiền ship</th>
                                     <th className="p-4 font-medium">Trạng thái</th>
                                     <th className="p-4 font-medium">Hành động</th>
                                 </tr>
@@ -290,10 +289,11 @@ const Orders: React.FC = () => {
                                     <tr key={o.ma_don_hang} className="hover:bg-muted/50 transition-colors">
                                         <td className="p-4 text-foreground">{o.ma_don_hang}</td>
                                         <td className="p-4 text-foreground">{o.ten_khach_hang || ('#' + (o.ma_khach_hang ?? '-'))}</td>
-                                        <td className="p-4 text-foreground">{o.ten_nguoi_nhan || '-'}</td>
                                         <td className="p-4 text-foreground">{o.so_dien_thoai_nhan || '-'}</td>
                                         <td className="p-4 text-foreground">{o.thoi_gian_mua}</td>
-                                        <td className="p-4 text-foreground">{o.tong_tien}</td>
+                                        <td className="p-4 text-foreground">{o.thoi_gian_giao || '-'}</td>
+                                        <td className="p-4 text-foreground">{Number(o.tong_tien || 0).toLocaleString('vi-VN')}₫</td>
+                                        <td className="p-4 text-foreground">{Number(o.tien_ship || 0).toLocaleString('vi-VN')}₫</td>
                                         <td className="p-4 text-foreground">
                                             {o.trang_thai === 'hoan_tat' ? (
                                                 <span className="inline-block px-2 py-1 rounded-full bg-green-600 text-white text-sm font-semibold">Hoàn thành</span>
@@ -337,11 +337,7 @@ const Orders: React.FC = () => {
                                 </select>
                                 {orderFieldErrors.customer && <p className="text-red-600 text-xs mt-1">{orderFieldErrors.customer}</p>}
                             </div>
-                            <div>
-                                <label className="text-sm font-medium text-muted-foreground">Tên người nhận</label>
-                                <input className={`w-full border border-input bg-background text-foreground px-3 py-2 rounded mt-1 focus:ring-2 focus:ring-black focus:outline-none ${orderFieldErrors.name ? 'border-red-500' : ''}`} value={recipientName} onChange={(e) => setRecipientName(e.target.value)} />
-                                {orderFieldErrors.name && <p className="text-red-600 text-xs mt-1">{orderFieldErrors.name}</p>}
-                                                            </div>
+                            
                                                             <div>
                                                                 <label className="text-sm font-medium text-muted-foreground">Số điện thoại người nhận</label>
                                 <input className={`w-full border border-input bg-background text-foreground px-3 py-2 rounded mt-1 focus:ring-2 focus:ring-black focus:outline-none ${orderFieldErrors.phone ? 'border-red-500' : ''}`} value={recipientPhone} onChange={(e) => setRecipientPhone(e.target.value)} />
@@ -424,16 +420,16 @@ const Orders: React.FC = () => {
                                 <p className="font-semibold text-foreground">{detail.ten_khach_hang}</p>
                             </div>
                             <div>
-                                <p className="text-sm text-muted-foreground">Người nhận</p>
-                                <p className="font-semibold text-foreground">{detail.ten_nguoi_nhan || '-'}</p>
-                            </div>
-                            <div>
                                 <p className="text-sm text-muted-foreground">SĐT nhận</p>
                                 <p className="font-semibold text-foreground">{detail.so_dien_thoai_nhan || '-'}</p>
                             </div>
                             <div>
                                 <p className="text-sm text-muted-foreground">Địa chỉ nhận</p>
                                 <p className="font-semibold text-foreground">{detail.dia_chi_nhan || detail.dia_chi || '-'}</p>
+                            </div>
+                            <div>
+                                <p className="text-sm text-muted-foreground">Thời gian giao</p>
+                                <p className="font-semibold text-foreground">{detail.thoi_gian_giao || '-'}</p>
                             </div>
                             <div>
                                 <p className="text-sm text-muted-foreground">Ngày mua</p>
@@ -497,7 +493,9 @@ const Orders: React.FC = () => {
                             </table>
                         </div>
                         <div className="text-right pt-4 border-t border-border">
-                            <p className="font-bold text-foreground">Tổng cộng: {detail.tong_tien}đ</p>
+                            <p className="font-bold text-foreground">Tổng hàng: {Number(detail.tong_tien || 0).toLocaleString('vi-VN')}₫</p>
+                            <p className="font-medium text-foreground">Tiền ship: {Number(detail.tien_ship || 0).toLocaleString('vi-VN')}₫</p>
+                            <p className="font-bold text-foreground">Tổng cộng (bao gồm ship): {Number((detail.tong_tien || 0) + (detail.tien_ship || 0)).toLocaleString('vi-VN')}₫</p>
                             <div className="flex justify-end items-center gap-2">
                                 <button onClick={() => setDetail(null)} className="bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded mt-2 transition">Đóng</button>
                             </div>

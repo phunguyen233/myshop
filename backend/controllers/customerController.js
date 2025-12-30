@@ -69,7 +69,7 @@ export const getCustomerOrders = async (req, res) => {
   try {
     const { id } = req.params;
     const [orders] = await db.query(
-      "SELECT d.ma_don_hang, d.ma_khach_hang, d.ten_nguoi_nhan, d.so_dien_thoai_nhan, d.dia_chi_nhan, d.tong_tien, d.trang_thai, DATE_FORMAT(CONVERT_TZ(d.thoi_gian_mua, @@session.time_zone, '+07:00'), '%Y-%m-%d %H:%i:%s') as thoi_gian_mua FROM donhang d WHERE d.ma_khach_hang = ? ORDER BY d.thoi_gian_mua DESC",
+      "SELECT d.ma_don_hang, d.ma_khach_hang, d.so_dien_thoai_nhan, d.dia_chi_nhan, d.tong_tien, d.trang_thai, d.tien_ship, DATE_FORMAT(CONVERT_TZ(d.thoi_gian_mua, @@session.time_zone, '+07:00'), '%Y-%m-%d %H:%i:%s') as thoi_gian_mua, DATE_FORMAT(CONVERT_TZ(d.thoi_gian_giao, @@session.time_zone, '+07:00'), '%Y-%m-%d %H:%i:%s') as thoi_gian_giao FROM donhang d WHERE d.ma_khach_hang = ? ORDER BY d.thoi_gian_mua DESC",
       [id]
     );
     // Với mỗi đơn hàng, lấy chi tiết sản phẩm trong đơn

@@ -3,7 +3,7 @@ import db from "../config/db.js";
 export const getOrders = async (req, res) => {
   try {
     const [rows] = await db.query(
-      "SELECT d.ma_don_hang, d.ma_khach_hang, d.ten_nguoi_nhan, d.so_dien_thoai_nhan, d.dia_chi_nhan, d.tong_tien, d.trang_thai, d.tien_ship, DATE_FORMAT(CONVERT_TZ(d.thoi_gian_mua, @@session.time_zone, '+07:00'), '%Y-%m-%d %H:%i:%s') as thoi_gian_mua, DATE_FORMAT(CONVERT_TZ(d.thoi_gian_giao, @@session.time_zone, '+07:00'), '%Y-%m-%d %H:%i:%s') as thoi_gian_giao, k.ho_ten as ten_khach_hang, k.so_dien_thoai as khach_so_dien_thoai FROM donhang d LEFT JOIN khachhang k ON d.ma_khach_hang = k.ma_khach_hang ORDER BY d.thoi_gian_mua DESC"
+      "SELECT d.ma_don_hang, d.ma_khach_hang, d.so_dien_thoai_nhan, d.dia_chi_nhan, d.tong_tien, d.trang_thai, d.tien_ship, DATE_FORMAT(CONVERT_TZ(d.thoi_gian_mua, @@session.time_zone, '+07:00'), '%Y-%m-%d %H:%i:%s') as thoi_gian_mua, DATE_FORMAT(CONVERT_TZ(d.thoi_gian_giao, @@session.time_zone, '+07:00'), '%Y-%m-%d %H:%i:%s') as thoi_gian_giao, k.ho_ten as ten_khach_hang, k.so_dien_thoai as khach_so_dien_thoai FROM donhang d LEFT JOIN khachhang k ON d.ma_khach_hang = k.ma_khach_hang ORDER BY d.thoi_gian_mua DESC"
     );
     res.json(rows);
   } catch (err) {
@@ -14,7 +14,7 @@ export const getOrders = async (req, res) => {
 
 export const addOrder = async (req, res) => {
   try {
-    // Dữ liệu mong đợi: { ma_khach_hang?, ma_tai_khoan?, ho_ten?, nam_sinh?, dia_chi?, so_dien_thoai?, ten_nguoi_nhan, so_dien_thoai_nhan, dia_chi_nhan, tong_tien, chi_tiet }
+    // Dữ liệu mong đợi: { ma_khach_hang?, ma_tai_khoan?, ho_ten?, nam_sinh?, dia_chi?, so_dien_thoai?, so_dien_thoai_nhan, dia_chi_nhan, thoi_gian_giao, tien_ship, tong_tien, chi_tiet }
     const {
       ma_khach_hang,
       ma_tai_khoan,

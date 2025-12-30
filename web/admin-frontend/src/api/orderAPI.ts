@@ -13,13 +13,13 @@ export interface Order {
   ma_don_hang?: number;
   ma_khach_hang?: number;
   thoi_gian_mua?: string;
+  thoi_gian_giao?: string;
   tong_tien?: number;
   trang_thai?: string;
   items?: OrderItem[];
   ten_khach_hang?: string;
   dia_chi?: string;
   nam_sinh?: string;
-  ten_nguoi_nhan?: string;
   so_dien_thoai_nhan?: string;
   dia_chi_nhan?: string;
   tien_ship?: number;
@@ -36,7 +36,7 @@ export const orderAPI = {
     const res = await axiosClient.get(`${endpoint}/${id}`);
     return res.data;
   },
-  create: async (payload: { ma_khach_hang?: number; ten_nguoi_nhan?: string; so_dien_thoai_nhan?: string; dia_chi_nhan?: string; tong_tien: number; chi_tiet: OrderItem[] }) => {
+  create: async (payload: { ma_khach_hang?: number; so_dien_thoai_nhan?: string; dia_chi_nhan?: string; thoi_gian_giao?: string; tien_ship?: number; tong_tien: number; chi_tiet: OrderItem[] }) => {
     const res = await axiosClient.post(endpoint, payload);
     return res.data;
   },
