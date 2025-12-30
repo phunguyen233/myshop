@@ -3,7 +3,7 @@ import db from "../config/db.js";
 export const getOrders = async (req, res) => {
   try {
     const [rows] = await db.query(
-      "SELECT d.ma_don_hang, d.ma_khach_hang, d.ten_nguoi_nhan, d.so_dien_thoai_nhan, d.dia_chi_nhan, d.tong_tien, d.trang_thai, DATE_FORMAT(CONVERT_TZ(d.thoi_gian_mua, @@session.time_zone, '+07:00'), '%Y-%m-%d %H:%i:%s') as thoi_gian_mua, k.ho_ten as ten_khach_hang, k.so_dien_thoai as khach_so_dien_thoai FROM donhang d LEFT JOIN khachhang k ON d.ma_khach_hang = k.ma_khach_hang ORDER BY d.thoi_gian_mua DESC"
+      "SELECT d.ma_don_hang, d.ma_khach_hang, d.ten_nguoi_nhan, d.so_dien_thoai_nhan, d.dia_chi_nhan, d.tong_tien, d.trang_thai, d.tien_ship, DATE_FORMAT(CONVERT_TZ(d.thoi_gian_mua, @@session.time_zone, '+07:00'), '%Y-%m-%d %H:%i:%s') as thoi_gian_mua, DATE_FORMAT(CONVERT_TZ(d.thoi_gian_giao, @@session.time_zone, '+07:00'), '%Y-%m-%d %H:%i:%s') as thoi_gian_giao, k.ho_ten as ten_khach_hang, k.so_dien_thoai as khach_so_dien_thoai FROM donhang d LEFT JOIN khachhang k ON d.ma_khach_hang = k.ma_khach_hang ORDER BY d.thoi_gian_mua DESC"
     );
     res.json(rows);
   } catch (err) {
@@ -20,9 +20,10 @@ export const addOrder = async (req, res) => {
       ma_tai_khoan,
       ho_ten,
       so_dien_thoai,
-      ten_nguoi_nhan,
       so_dien_thoai_nhan,
       dia_chi_nhan,
+      thoi_gian_giao,
+      tien_ship,
       tong_tien,
       chi_tiet,
     } = req.body;
@@ -59,9 +60,13 @@ export const addOrder = async (req, res) => {
 
     // Chèn bản ghi vào `donhang` kèm thông tin người nhận
     // Đặt `trang_thai` mặc định là 'cho_xu_ly' để chắc chắn tạo đơn không gây trừ nguyên liệu
+    // thoi_gian_giao is required by the schema; if not provided, default to NOW()
+    const final_thoi_gian_giao = thoi_gian_giao || new Date();
+    const final_tien_ship = typeof tien_ship !== 'undefined' && tien_ship !== null ? tien_ship : 0;
+
     const [order] = await db.query(
-      "INSERT INTO donhang (ma_khach_hang, ten_nguoi_nhan, so_dien_thoai_nhan, dia_chi_nhan, tong_tien, trang_thai, thoi_gian_mua) VALUES (?, ?, ?, ?, ?, ?, NOW())",
-      [final_ma_khach_hang, ten_nguoi_nhan || null, so_dien_thoai_nhan || null, dia_chi_nhan || null, tong_tien, 'cho_xu_ly']
+      "INSERT INTO donhang (ma_khach_hang, so_dien_thoai_nhan, dia_chi_nhan, thoi_gian_giao, tong_tien, trang_thai, tien_ship) VALUES (?, ?, ?, ?, ?, ?, ?)",
+      [final_ma_khach_hang, so_dien_thoai_nhan || null, dia_chi_nhan || null, final_thoi_gian_giao, tong_tien, 'cho_xu_ly', final_tien_ship]
     );
     const ma_don_hang = order.insertId;
 
@@ -153,7 +158,7 @@ export const getOrderById = async (req, res) => {
   try {
     const { id } = req.params;
     const [[order]] = await db.query(
-      "SELECT d.ma_don_hang, d.ma_khach_hang, d.ten_nguoi_nhan, d.so_dien_thoai_nhan, d.dia_chi_nhan, d.tong_tien, d.trang_thai, DATE_FORMAT(CONVERT_TZ(d.thoi_gian_mua, @@session.time_zone, '+07:00'), '%Y-%m-%d %H:%i:%s') as thoi_gian_mua, k.ho_ten as ten_khach_hang, k.so_dien_thoai as khach_so_dien_thoai FROM donhang d LEFT JOIN khachhang k ON d.ma_khach_hang = k.ma_khach_hang WHERE d.ma_don_hang = ?",
+      "SELECT d.ma_don_hang, d.ma_khach_hang, d.so_dien_thoai_nhan, d.dia_chi_nhan, d.tong_tien, d.trang_thai, d.tien_ship, DATE_FORMAT(CONVERT_TZ(d.thoi_gian_mua, @@session.time_zone, '+07:00'), '%Y-%m-%d %H:%i:%s') as thoi_gian_mua, DATE_FORMAT(CONVERT_TZ(d.thoi_gian_giao, @@session.time_zone, '+07:00'), '%Y-%m-%d %H:%i:%s') as thoi_gian_giao, k.ho_ten as ten_khach_hang, k.so_dien_thoai as khach_so_dien_thoai FROM donhang d LEFT JOIN khachhang k ON d.ma_khach_hang = k.ma_khach_hang WHERE d.ma_don_hang = ?",
       [id]
     );
 
@@ -177,7 +182,7 @@ export const searchOrders = async (req, res) => {
     if (!q) return res.json([]);
     const search = `%${q}%`;
     const [rows] = await db.query(
-      `SELECT d.ma_don_hang, d.ma_khach_hang, d.ten_nguoi_nhan, d.so_dien_thoai_nhan, d.dia_chi_nhan, d.tong_tien, d.trang_thai, DATE_FORMAT(CONVERT_TZ(d.thoi_gian_mua, @@session.time_zone, '+07:00'), '%Y-%m-%d %H:%i:%s') as thoi_gian_mua FROM donhang d LEFT JOIN khachhang k ON d.ma_khach_hang = k.ma_khach_hang
+      `SELECT d.ma_don_hang, d.ma_khach_hang, d.so_dien_thoai_nhan, d.dia_chi_nhan, d.tong_tien, d.trang_thai, d.tien_ship, DATE_FORMAT(CONVERT_TZ(d.thoi_gian_mua, @@session.time_zone, '+07:00'), '%Y-%m-%d %H:%i:%s') as thoi_gian_mua, DATE_FORMAT(CONVERT_TZ(d.thoi_gian_giao, @@session.time_zone, '+07:00'), '%Y-%m-%d %H:%i:%s') as thoi_gian_giao FROM donhang d LEFT JOIN khachhang k ON d.ma_khach_hang = k.ma_khach_hang
        LEFT JOIN chitiet_donhang c ON c.ma_don_hang = d.ma_don_hang
        LEFT JOIN sanpham s ON s.ma_san_pham = c.ma_san_pham
        WHERE d.ma_don_hang LIKE ? OR k.ho_ten LIKE ? OR s.ten_san_pham LIKE ?
@@ -194,7 +199,7 @@ export const searchOrders = async (req, res) => {
 export const updateOrderStatus = async (req, res) => {
   try {
     const { id } = req.params;
-    const { trang_thai } = req.body;
+    const { trang_thai, tien_ship } = req.body;
     if (!trang_thai) return res.status(400).json({ message: "Thiếu trạng thái" });
 
     // Kiểm tra giá trị trạng thái có hợp lệ so với enum trong schema
@@ -342,13 +347,17 @@ export const updateOrderStatus = async (req, res) => {
         }
       }
 
-      // Cập nhật trạng thái đơn hàng
-      await connection.query("UPDATE donhang SET trang_thai = ? WHERE ma_don_hang = ?", [trang_thai, id]);
+      // Cập nhật trạng thái đơn hàng (và tiền ship nếu có)
+      if (typeof tien_ship !== 'undefined' && tien_ship !== null) {
+        await connection.query("UPDATE donhang SET trang_thai = ?, tien_ship = ? WHERE ma_don_hang = ?", [trang_thai, tien_ship, id]);
+      } else {
+        await connection.query("UPDATE donhang SET trang_thai = ? WHERE ma_don_hang = ?", [trang_thai, id]);
+      }
 
       await connection.commit();
 
       const [[order]] = await db.query(
-        "SELECT d.ma_don_hang, d.ma_khach_hang, d.ten_nguoi_nhan, d.so_dien_thoai_nhan, d.dia_chi_nhan, d.tong_tien, d.trang_thai, DATE_FORMAT(CONVERT_TZ(d.thoi_gian_mua, @@session.time_zone, '+07:00'), '%Y-%m-%d %H:%i:%s') as thoi_gian_mua, k.ho_ten as ten_khach_hang, k.so_dien_thoai as khach_so_dien_thoai FROM donhang d LEFT JOIN khachhang k ON d.ma_khach_hang = k.ma_khach_hang WHERE d.ma_don_hang = ?",
+        "SELECT d.ma_don_hang, d.ma_khach_hang, d.so_dien_thoai_nhan, d.dia_chi_nhan, d.tong_tien, d.trang_thai, d.tien_ship, DATE_FORMAT(CONVERT_TZ(d.thoi_gian_mua, @@session.time_zone, '+07:00'), '%Y-%m-%d %H:%i:%s') as thoi_gian_mua, DATE_FORMAT(CONVERT_TZ(d.thoi_gian_giao, @@session.time_zone, '+07:00'), '%Y-%m-%d %H:%i:%s') as thoi_gian_giao, k.ho_ten as ten_khach_hang, k.so_dien_thoai as khach_so_dien_thoai FROM donhang d LEFT JOIN khachhang k ON d.ma_khach_hang = k.ma_khach_hang WHERE d.ma_don_hang = ?",
         [id]
       );
 

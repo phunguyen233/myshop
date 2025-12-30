@@ -10,6 +10,7 @@ const Orders: React.FC = () => {
     const [selectedStatus, setSelectedStatus] = useState<'all' | 'cho_xu_ly' | 'da_thanh_toan' | 'dang_giao' | 'hoan_tat' | 'huy'>('all');
     const [detail, setDetail] = useState<Order | null>(null);
     const [newStatus, setNewStatus] = useState<string>("");
+    const [shipFee, setShipFee] = useState<number | null>(null);
     const [showAddModal, setShowAddModal] = useState(false);
     const [customers, setCustomers] = useState<any[]>([]);
     const [products, setProducts] = useState<any[]>([]);
@@ -145,6 +146,7 @@ const Orders: React.FC = () => {
             const data = await orderAPI.getById(id);
             setDetail(data);
             setNewStatus(data.trang_thai || "cho_xu_ly");
+            setShipFee(typeof data.tien_ship !== 'undefined' && data.tien_ship !== null ? Number(data.tien_ship) : 0);
         } catch (err) {
             console.error(err);
             alert("Lỗi khi lấy chi tiết");
@@ -155,7 +157,33 @@ const Orders: React.FC = () => {
         if (!detail?.ma_don_hang) return;
         try {
             const previousStatus = detail.trang_thai;
-            const resp: any = await orderAPI.updateStatus(detail.ma_don_hang, newStatus);
+            // validate allowed transitions on client side too
+            const allowedTransitions: Record<string, string[]> = {
+                cho_xu_ly: ['da_thanh_toan','huy'],
+                da_thanh_toan: ['dang_giao'],
+                dang_giao: ['da_thanh_toan','hoan_tat'],
+                hoan_tat: [],
+                huy: []
+            };
+            if (previousStatus === 'huy' || previousStatus === 'hoan_tat') {
+                alert('Đơn hàng ở trạng thái này không được chỉnh trạng thái.');
+                return;
+            }
+            if (previousStatus && previousStatus !== newStatus) {
+                const allowed = allowedTransitions[previousStatus] || [];
+                if (!allowed.includes(newStatus)) {
+                    alert('Không được phép chuyển trạng thái từ "' + (previousStatus || '') + '" sang "' + (newStatus || '') + '"');
+                    return;
+                }
+            }
+
+            // require ship fee when saving to 'da_thanh_toan'
+            if (newStatus === 'da_thanh_toan' && (shipFee === null || typeof shipFee === 'undefined')) {
+                alert('Vui lòng nhập tiền ship trước khi lưu trạng thái Đã thanh toán.');
+                return;
+            }
+
+            const resp: any = await orderAPI.updateStatus(detail.ma_don_hang, newStatus, shipFee ?? undefined);
             alert(resp?.message || 'Cập nhật trạng thái thành công');
             // refresh list and detail
             fetchOrders();
@@ -414,13 +442,35 @@ const Orders: React.FC = () => {
                             <div>
                                 <p className="text-sm text-muted-foreground">Trạng thái</p>
                                     <div className="flex items-center gap-3 mt-1">
-                                        <select value={newStatus} onChange={(e) => setNewStatus(e.target.value)} className="border border-input bg-background text-foreground rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-black">
-                                            {statuses.map((s) => (
-                                                <option key={s} value={s}>{statusLabels[s]}</option>
-                                            ))}
-                                        </select>
-                                        <button onClick={handleUpdateStatus} className="bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded transition text-sm">Lưu</button>
+                                                <select value={newStatus} onChange={(e) => setNewStatus(e.target.value)} className="border border-input bg-background text-foreground rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-black">
+                                                    {statuses.map((s) => {
+                                                        // compute whether this target status should be disabled based on current status
+                                                        const current = detail?.trang_thai || '';
+                                                        const allowedTransitions: Record<string, string[]> = {
+                                                            cho_xu_ly: ['da_thanh_toan','huy'],
+                                                            da_thanh_toan: ['dang_giao'],
+                                                            dang_giao: ['da_thanh_toan','hoan_tat'],
+                                                            hoan_tat: [],
+                                                            huy: []
+                                                        };
+                                                        let disabled = false;
+                                                        if (current === 'huy' || current === 'hoan_tat') {
+                                                            disabled = s !== current; // don't allow changing when in these states
+                                                        } else if (current && current !== s) {
+                                                            const allowed = allowedTransitions[current] || [];
+                                                            if (!allowed.includes(s)) disabled = true;
+                                                        }
+                                                        return <option key={s} value={s} disabled={disabled}>{statusLabels[s]}</option>;
+                                                    })}
+                                                </select>
+                                                <button onClick={handleUpdateStatus} disabled={detail?.trang_thai === 'huy' || detail?.trang_thai === 'hoan_tat'} className="bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded transition text-sm disabled:opacity-50">Lưu</button>
                                     </div>
+                                            {(newStatus === 'dang_giao' || newStatus === 'da_thanh_toan') && (
+                                                <div className="mt-3">
+                                                    <label className="text-sm font-medium text-muted-foreground">Tiền ship (VNĐ)</label>
+                                                    <input type="number" min={0} value={shipFee ?? 0} onChange={(e) => setShipFee(Number(e.target.value))} className="w-48 border border-input rounded px-3 py-2 mt-1 text-foreground" />
+                                                </div>
+                                            )}
                             </div>
                         </div>
                         <h4 className="font-semibold mb-3 text-foreground">Danh sách sản phẩm</h4>

@@ -26,7 +26,7 @@ const Ingredients: React.FC = () => {
   const [receiptsList, setReceiptsList] = useState<any[]>([]);
   const [selectedReceiptIngredientName, setSelectedReceiptIngredientName] = useState<string>("");
   const [search, setSearch] = useState("");
-  const [viewMode, setViewMode] = useState<'ingredients' | 'warehouse'>('ingredients');
+  const [viewMode, setViewMode] = useState<'ingredients' | 'warehouse'>('warehouse');
   const refreshMergedData = async () => {
     try {
       const [u, ingr, wh] = await Promise.all([unitAPI.getAll(), ingredientAPI.getAll(), ingredientAPI.getWarehouse()]);
@@ -252,8 +252,8 @@ const Ingredients: React.FC = () => {
 
       <div className="w-full flex flex-col items-center gap-4">
         <div className="flex items-center gap-3">
-          <button onClick={() => setViewMode('warehouse')} className={`px-4 py-2 rounded-lg font-medium ${viewMode === 'warehouse' ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-700'}`}>Kho</button>
-          <button onClick={() => setViewMode('ingredients')} className={`px-4 py-2 rounded-lg font-medium ${viewMode === 'ingredients' ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-700'}`}>Nguyên liệu</button>
+          <button onClick={() => setViewMode('warehouse')} className={`min-w-[140px] px-4 py-2 rounded-lg font-medium text-center ${viewMode === 'warehouse' ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-700'}`}>Kho</button>
+          <button onClick={() => setViewMode('ingredients')} className={`min-w-[140px] px-4 py-2 rounded-lg font-medium text-center ${viewMode === 'ingredients' ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-700'}`}>Nguyên liệu</button>
         </div>
 
         <div className="w-full flex items-center justify-between">

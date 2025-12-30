@@ -91,6 +91,7 @@ export default function BranchPage() {
           className="rounded-2xl overflow-hidden shadow-xl w-full h-[400px] md:h-[500px]"
         >
           <iframe
+            title="Bản đồ chi nhánh Bếp Mầm"
             src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3724.023535018051!2d105.82067227596986!3d21.031744287674815!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3135abc93acbb111%3A0x362ca2ad681af31e!2zQuG6v3AgTeG6p20gLSBT4buvYSBo4bqhdCB0aHXhuqduIGNoYXk!5e0!3m2!1svi!2s!4v1764589512696!5m2!1svi!2s" 
             className="w-full h-full border-0"
             allowFullScreen
