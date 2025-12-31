@@ -20,6 +20,7 @@ const Orders: React.FC = () => {
     // recipient name removed from schema
     const [recipientPhone, setRecipientPhone] = useState("");
     const [recipientAddress, setRecipientAddress] = useState("");
+    const [deliveryTime, setDeliveryTime] = useState<string | null>(null);
     const [orderItems, setOrderItems] = useState<Array<{ ma_san_pham: number; ten_san_pham?: string; so_luong: number; don_gia: number }>>([]);
     const [orderFieldErrors, setOrderFieldErrors] = useState<{ customer?: string; items?: string; phone?: string; address?: string }>({});
 
@@ -82,6 +83,7 @@ const Orders: React.FC = () => {
         await Promise.all([fetchCustomers(), fetchProducts()]);
         setSelectedCustomer(undefined);
         setRecipientPhone("");
+        setDeliveryTime(null);
         setOrderItems([]);
         setShowAddModal(true);
     };
@@ -126,7 +128,7 @@ const Orders: React.FC = () => {
 
         try {
             const chi_tiet = orderItems.map(it => ({ ma_san_pham: it.ma_san_pham, so_luong: it.so_luong, don_gia: it.don_gia }));
-            const payload: any = { ma_khach_hang: selectedCustomer, so_dien_thoai_nhan: recipientPhone || null, dia_chi_nhan: recipientAddress || null, tong_tien: computeTotal(), chi_tiet };
+            const payload: any = { ma_khach_hang: selectedCustomer, so_dien_thoai_nhan: recipientPhone || null, dia_chi_nhan: recipientAddress || null, thoi_gian_giao: deliveryTime || undefined, tong_tien: computeTotal(), chi_tiet };
             await orderAPI.create(payload);
             alert('Tạo đơn hàng thành công');
             setShowAddModal(false);
@@ -272,14 +274,14 @@ const Orders: React.FC = () => {
                     <div className="overflow-x-auto">
                         <table className="w-full text-left text-sm">
                             <thead className="bg-muted/50 text-muted-foreground">
-                                <tr>
+                                    <tr>
                                     <th className="p-4 font-medium">Mã đơn</th>
                                     <th className="p-4 font-medium">Khách</th>
+                                    <th className="p-4 font-medium">Thời gian giao</th>
                                     <th className="p-4 font-medium">SĐT nhận</th>
                                     <th className="p-4 font-medium">Thời gian mua</th>
-                                    <th className="p-4 font-medium">Thời gian giao</th>
                                     <th className="p-4 font-medium">Tổng tiền</th>
-                                    <th className="p-4 font-medium">Tiền ship</th>
+                                    <th className="p-4 font-medium">Lãi</th>
                                     <th className="p-4 font-medium">Trạng thái</th>
                                     <th className="p-4 font-medium">Hành động</th>
                                 </tr>
@@ -289,11 +291,11 @@ const Orders: React.FC = () => {
                                     <tr key={o.ma_don_hang} className="hover:bg-muted/50 transition-colors">
                                         <td className="p-4 text-foreground">{o.ma_don_hang}</td>
                                         <td className="p-4 text-foreground">{o.ten_khach_hang || ('#' + (o.ma_khach_hang ?? '-'))}</td>
+                                        <td className="p-4 text-foreground">{o.thoi_gian_giao || '-'}</td>
                                         <td className="p-4 text-foreground">{o.so_dien_thoai_nhan || '-'}</td>
                                         <td className="p-4 text-foreground">{o.thoi_gian_mua}</td>
-                                        <td className="p-4 text-foreground">{o.thoi_gian_giao || '-'}</td>
                                         <td className="p-4 text-foreground">{Number(o.tong_tien || 0).toLocaleString('vi-VN')}₫</td>
-                                        <td className="p-4 text-foreground">{Number(o.tien_ship || 0).toLocaleString('vi-VN')}₫</td>
+                                        <td className="p-4 text-foreground">{Number(o.profit || 0).toLocaleString('vi-VN')}₫</td>
                                         <td className="p-4 text-foreground">
                                             {o.trang_thai === 'hoan_tat' ? (
                                                 <span className="inline-block px-2 py-1 rounded-full bg-green-600 text-white text-sm font-semibold">Hoàn thành</span>
@@ -340,8 +342,12 @@ const Orders: React.FC = () => {
                             
                                                             <div>
                                                                 <label className="text-sm font-medium text-muted-foreground">Số điện thoại người nhận</label>
-                                <input className={`w-full border border-input bg-background text-foreground px-3 py-2 rounded mt-1 focus:ring-2 focus:ring-black focus:outline-none ${orderFieldErrors.phone ? 'border-red-500' : ''}`} value={recipientPhone} onChange={(e) => setRecipientPhone(e.target.value)} />
-                                {orderFieldErrors.phone && <p className="text-red-600 text-xs mt-1">{orderFieldErrors.phone}</p>}
+                                                                <input className={`w-full border border-input bg-background text-foreground px-3 py-2 rounded mt-1 focus:ring-2 focus:ring-black focus:outline-none ${orderFieldErrors.phone ? 'border-red-500' : ''}`} value={recipientPhone} onChange={(e) => setRecipientPhone(e.target.value)} />
+                                                                {orderFieldErrors.phone && <p className="text-red-600 text-xs mt-1">{orderFieldErrors.phone}</p>}
+                                                            </div>
+                                                            <div>
+                                                                <label className="text-sm font-medium text-muted-foreground">Thời gian giao</label>
+                                                                <input type="datetime-local" value={deliveryTime ?? ''} onChange={(e) => setDeliveryTime(e.target.value || null)} className="w-full border border-input bg-background text-foreground px-3 py-2 rounded mt-1 focus:ring-2 focus:ring-black focus:outline-none" />
                                                             </div>
                                                             <div>
                                                                 <label className="text-sm font-medium text-muted-foreground">Địa chỉ nhận</label>
@@ -445,7 +451,7 @@ const Orders: React.FC = () => {
                                                         const allowedTransitions: Record<string, string[]> = {
                                                             cho_xu_ly: ['da_thanh_toan','huy'],
                                                             da_thanh_toan: ['dang_giao'],
-                                                            dang_giao: ['da_thanh_toan','hoan_tat'],
+                                                            dang_giao: ['hoan_tat'],
                                                             hoan_tat: [],
                                                             huy: []
                                                         };
@@ -461,7 +467,7 @@ const Orders: React.FC = () => {
                                                 </select>
                                                 <button onClick={handleUpdateStatus} disabled={detail?.trang_thai === 'huy' || detail?.trang_thai === 'hoan_tat'} className="bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded transition text-sm disabled:opacity-50">Lưu</button>
                                     </div>
-                                            {(newStatus === 'dang_giao' || newStatus === 'da_thanh_toan') && (
+                                            {(newStatus === 'dang_giao') && (
                                                 <div className="mt-3">
                                                     <label className="text-sm font-medium text-muted-foreground">Tiền ship (VNĐ)</label>
                                                     <input type="number" min={0} value={shipFee ?? 0} onChange={(e) => setShipFee(Number(e.target.value))} className="w-48 border border-input rounded px-3 py-2 mt-1 text-foreground" />
@@ -493,9 +499,8 @@ const Orders: React.FC = () => {
                             </table>
                         </div>
                         <div className="text-right pt-4 border-t border-border">
-                            <p className="font-bold text-foreground">Tổng hàng: {Number(detail.tong_tien || 0).toLocaleString('vi-VN')}₫</p>
                             <p className="font-medium text-foreground">Tiền ship: {Number(detail.tien_ship || 0).toLocaleString('vi-VN')}₫</p>
-                            <p className="font-bold text-foreground">Tổng cộng (bao gồm ship): {Number((detail.tong_tien || 0) + (detail.tien_ship || 0)).toLocaleString('vi-VN')}₫</p>
+                            <p className="font-bold text-foreground">Tổng hàng: {Number(detail.tong_tien || 0).toLocaleString('vi-VN')}₫</p>
                             <div className="flex justify-end items-center gap-2">
                                 <button onClick={() => setDetail(null)} className="bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded mt-2 transition">Đóng</button>
                             </div>

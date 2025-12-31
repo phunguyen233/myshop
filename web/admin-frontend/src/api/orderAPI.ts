@@ -23,6 +23,7 @@ export interface Order {
   so_dien_thoai_nhan?: string;
   dia_chi_nhan?: string;
   tien_ship?: number;
+  profit?: number;
 }
 
 const endpoint = "/orders";

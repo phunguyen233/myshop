@@ -3,9 +3,52 @@ import db from "../config/db.js";
 export const getOrders = async (req, res) => {
   try {
     const [rows] = await db.query(
-      "SELECT d.ma_don_hang, d.ma_khach_hang, d.so_dien_thoai_nhan, d.dia_chi_nhan, d.tong_tien, d.trang_thai, d.tien_ship, DATE_FORMAT(CONVERT_TZ(d.thoi_gian_mua, @@session.time_zone, '+07:00'), '%Y-%m-%d %H:%i:%s') as thoi_gian_mua, DATE_FORMAT(CONVERT_TZ(d.thoi_gian_giao, @@session.time_zone, '+07:00'), '%Y-%m-%d %H:%i:%s') as thoi_gian_giao, k.ho_ten as ten_khach_hang, k.so_dien_thoai as khach_so_dien_thoai FROM donhang d LEFT JOIN khachhang k ON d.ma_khach_hang = k.ma_khach_hang ORDER BY d.thoi_gian_mua DESC"
+      "SELECT d.ma_don_hang, d.ma_khach_hang, d.so_dien_thoai_nhan, d.dia_chi_nhan, d.tong_tien, d.trang_thai, d.tien_ship, DATE_FORMAT(d.thoi_gian_mua, '%Y-%m-%d %H:%i:%s') as thoi_gian_mua, DATE_FORMAT(d.thoi_gian_giao, '%Y-%m-%d %H:%i:%s') as thoi_gian_giao, k.ho_ten as ten_khach_hang, k.so_dien_thoai as khach_so_dien_thoai FROM donhang d LEFT JOIN khachhang k ON d.ma_khach_hang = k.ma_khach_hang ORDER BY d.thoi_gian_mua DESC"
     );
-    res.json(rows);
+
+    // compute profit for each order: product_total - ingredient_cost - tien_ship
+    const enhanced = [];
+    for (const o of rows) {
+      const ma = o.ma_don_hang;
+      // product total
+      const [[pt]] = await db.query("SELECT IFNULL(SUM(so_luong * don_gia),0) AS product_total FROM chitiet_donhang WHERE ma_don_hang = ?", [ma]);
+      const product_total = Number((pt && pt.product_total) || 0);
+
+      // compute ingredient cost by summing recipe needs * ingredient unit cost
+      const [rowsIng] = await db.query(
+        `SELECT c.so_luong AS qty_ordered, ct.ma_nguyen_lieu, ct.so_luong_can AS recipe_qty,
+                COALESCE(d.he_so_quy_doi,1) AS recipe_he_so,
+                COALESCE(du.he_so_quy_doi,1) AS nl_he_so,
+                nl.gia_nhap AS nl_total_price, nl.so_luong_ton AS nl_total_qty
+         FROM chitiet_donhang c
+         JOIN congthuc_sanpham ct ON ct.ma_san_pham = c.ma_san_pham
+         LEFT JOIN donvi d ON ct.don_vi_id = d.id
+         LEFT JOIN nguyenlieu nl ON ct.ma_nguyen_lieu = nl.ma_nguyen_lieu
+         LEFT JOIN donvi du ON nl.don_vi_id = du.id
+         WHERE c.ma_don_hang = ?`,
+        [ma]
+      );
+
+      let ingredient_cost = 0;
+      for (const r of rowsIng) {
+        const qtyOrdered = Number(r.qty_ordered || 0);
+        const recipeQty = Number(r.recipe_qty || 0);
+        if (qtyOrdered <= 0 || recipeQty <= 0) continue;
+        const recipeHs = Number(r.recipe_he_so || 1) || 1;
+        const nlHs = Number(r.nl_he_so || 1) || 1;
+        const needed = (recipeQty * recipeHs / nlHs) * qtyOrdered;
+        const nlTotalPrice = Number(r.nl_total_price || 0);
+        const nlTotalQty = Number(r.nl_total_qty || 0);
+        let perUnitPrice = 0;
+        if (nlTotalQty > 0) perUnitPrice = nlTotalPrice / nlTotalQty;
+        ingredient_cost += needed * perUnitPrice;
+      }
+
+      const tien_ship = Number(o.tien_ship || 0);
+      const profit = product_total - ingredient_cost - tien_ship;
+      enhanced.push({ ...o, product_total, ingredient_cost, profit });
+    }
+    res.json(enhanced);
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Lỗi khi lấy danh sách đơn hàng" });
@@ -158,7 +201,7 @@ export const getOrderById = async (req, res) => {
   try {
     const { id } = req.params;
     const [[order]] = await db.query(
-      "SELECT d.ma_don_hang, d.ma_khach_hang, d.so_dien_thoai_nhan, d.dia_chi_nhan, d.tong_tien, d.trang_thai, d.tien_ship, DATE_FORMAT(CONVERT_TZ(d.thoi_gian_mua, @@session.time_zone, '+07:00'), '%Y-%m-%d %H:%i:%s') as thoi_gian_mua, DATE_FORMAT(CONVERT_TZ(d.thoi_gian_giao, @@session.time_zone, '+07:00'), '%Y-%m-%d %H:%i:%s') as thoi_gian_giao, k.ho_ten as ten_khach_hang, k.so_dien_thoai as khach_so_dien_thoai FROM donhang d LEFT JOIN khachhang k ON d.ma_khach_hang = k.ma_khach_hang WHERE d.ma_don_hang = ?",
+      "SELECT d.ma_don_hang, d.ma_khach_hang, d.so_dien_thoai_nhan, d.dia_chi_nhan, d.tong_tien, d.trang_thai, d.tien_ship, DATE_FORMAT(d.thoi_gian_mua, '%Y-%m-%d %H:%i:%s') as thoi_gian_mua, DATE_FORMAT(d.thoi_gian_giao, '%Y-%m-%d %H:%i:%s') as thoi_gian_giao, k.ho_ten as ten_khach_hang, k.so_dien_thoai as khach_so_dien_thoai FROM donhang d LEFT JOIN khachhang k ON d.ma_khach_hang = k.ma_khach_hang WHERE d.ma_don_hang = ?",
       [id]
     );
 
@@ -182,7 +225,7 @@ export const searchOrders = async (req, res) => {
     if (!q) return res.json([]);
     const search = `%${q}%`;
     const [rows] = await db.query(
-      `SELECT d.ma_don_hang, d.ma_khach_hang, d.so_dien_thoai_nhan, d.dia_chi_nhan, d.tong_tien, d.trang_thai, d.tien_ship, DATE_FORMAT(CONVERT_TZ(d.thoi_gian_mua, @@session.time_zone, '+07:00'), '%Y-%m-%d %H:%i:%s') as thoi_gian_mua, DATE_FORMAT(CONVERT_TZ(d.thoi_gian_giao, @@session.time_zone, '+07:00'), '%Y-%m-%d %H:%i:%s') as thoi_gian_giao FROM donhang d LEFT JOIN khachhang k ON d.ma_khach_hang = k.ma_khach_hang
+      `SELECT d.ma_don_hang, d.ma_khach_hang, d.so_dien_thoai_nhan, d.dia_chi_nhan, d.tong_tien, d.trang_thai, d.tien_ship, DATE_FORMAT(d.thoi_gian_mua, '%Y-%m-%d %H:%i:%s') as thoi_gian_mua, DATE_FORMAT(d.thoi_gian_giao, '%Y-%m-%d %H:%i:%s') as thoi_gian_giao FROM donhang d LEFT JOIN khachhang k ON d.ma_khach_hang = k.ma_khach_hang
        LEFT JOIN chitiet_donhang c ON c.ma_don_hang = d.ma_don_hang
        LEFT JOIN sanpham s ON s.ma_san_pham = c.ma_san_pham
        WHERE d.ma_don_hang LIKE ? OR k.ho_ten LIKE ? OR s.ten_san_pham LIKE ?
@@ -357,7 +400,7 @@ export const updateOrderStatus = async (req, res) => {
       await connection.commit();
 
       const [[order]] = await db.query(
-        "SELECT d.ma_don_hang, d.ma_khach_hang, d.so_dien_thoai_nhan, d.dia_chi_nhan, d.tong_tien, d.trang_thai, d.tien_ship, DATE_FORMAT(CONVERT_TZ(d.thoi_gian_mua, @@session.time_zone, '+07:00'), '%Y-%m-%d %H:%i:%s') as thoi_gian_mua, DATE_FORMAT(CONVERT_TZ(d.thoi_gian_giao, @@session.time_zone, '+07:00'), '%Y-%m-%d %H:%i:%s') as thoi_gian_giao, k.ho_ten as ten_khach_hang, k.so_dien_thoai as khach_so_dien_thoai FROM donhang d LEFT JOIN khachhang k ON d.ma_khach_hang = k.ma_khach_hang WHERE d.ma_don_hang = ?",
+        "SELECT d.ma_don_hang, d.ma_khach_hang, d.so_dien_thoai_nhan, d.dia_chi_nhan, d.tong_tien, d.trang_thai, d.tien_ship, DATE_FORMAT(d.thoi_gian_mua, '%Y-%m-%d %H:%i:%s') as thoi_gian_mua, DATE_FORMAT(d.thoi_gian_giao, '%Y-%m-%d %H:%i:%s') as thoi_gian_giao, k.ho_ten as ten_khach_hang, k.so_dien_thoai as khach_so_dien_thoai FROM donhang d LEFT JOIN khachhang k ON d.ma_khach_hang = k.ma_khach_hang WHERE d.ma_don_hang = ?",
         [id]
       );
 
