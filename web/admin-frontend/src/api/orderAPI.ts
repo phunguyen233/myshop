@@ -24,6 +24,7 @@ export interface Order {
   dia_chi_nhan?: string;
   tien_ship?: number;
   profit?: number;
+  tien_dong_goi?: number;
   packagedItems?: Array<{ ma_nguyen_lieu: number; ten_nguyen_lieu?: string; so_luong: number; don_gia: number }>;
   packaged_total?: number;
 }

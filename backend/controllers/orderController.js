@@ -3,7 +3,7 @@ import db from "../config/db.js";
 export const getOrders = async (req, res) => {
   try {
     const [rows] = await db.query(
-      "SELECT d.ma_don_hang, d.ma_khach_hang, d.so_dien_thoai_nhan, d.dia_chi_nhan, d.tong_tien, d.trang_thai, d.tien_ship, DATE_FORMAT(d.thoi_gian_mua, '%Y-%m-%d %H:%i:%s') as thoi_gian_mua, DATE_FORMAT(d.thoi_gian_giao, '%Y-%m-%d %H:%i:%s') as thoi_gian_giao, k.ho_ten as ten_khach_hang, k.so_dien_thoai as khach_so_dien_thoai FROM donhang d LEFT JOIN khachhang k ON d.ma_khach_hang = k.ma_khach_hang ORDER BY d.thoi_gian_mua DESC"
+      "SELECT d.ma_don_hang, d.ma_khach_hang, d.so_dien_thoai_nhan, d.dia_chi_nhan, d.tong_tien, d.trang_thai, d.tien_ship, d.tien_dong_goi, DATE_FORMAT(d.thoi_gian_mua, '%Y-%m-%d %H:%i:%s') as thoi_gian_mua, DATE_FORMAT(d.thoi_gian_giao, '%Y-%m-%d %H:%i:%s') as thoi_gian_giao, k.ho_ten as ten_khach_hang, k.so_dien_thoai as khach_so_dien_thoai FROM donhang d LEFT JOIN khachhang k ON d.ma_khach_hang = k.ma_khach_hang ORDER BY d.thoi_gian_mua DESC"
     );
 
     // compute profit for each order: product_total - ingredient_cost - tien_ship
@@ -45,7 +45,8 @@ export const getOrders = async (req, res) => {
       }
 
       const tien_ship = Number(o.tien_ship || 0);
-      const profit = product_total - ingredient_cost - tien_ship;
+      const tien_dong_goi = Number(o.tien_dong_goi || 0);
+      const profit = product_total - ingredient_cost - tien_ship - tien_dong_goi;
       enhanced.push({ ...o, product_total, ingredient_cost, profit });
     }
     res.json(enhanced);
@@ -201,7 +202,7 @@ export const getOrderById = async (req, res) => {
   try {
     const { id } = req.params;
     const [[order]] = await db.query(
-      "SELECT d.ma_don_hang, d.ma_khach_hang, d.so_dien_thoai_nhan, d.dia_chi_nhan, d.tong_tien, d.trang_thai, d.tien_ship, DATE_FORMAT(d.thoi_gian_mua, '%Y-%m-%d %H:%i:%s') as thoi_gian_mua, DATE_FORMAT(d.thoi_gian_giao, '%Y-%m-%d %H:%i:%s') as thoi_gian_giao, k.ho_ten as ten_khach_hang, k.so_dien_thoai as khach_so_dien_thoai FROM donhang d LEFT JOIN khachhang k ON d.ma_khach_hang = k.ma_khach_hang WHERE d.ma_don_hang = ?",
+      "SELECT d.ma_don_hang, d.ma_khach_hang, d.so_dien_thoai_nhan, d.dia_chi_nhan, d.tong_tien, d.trang_thai, d.tien_ship, d.tien_dong_goi, DATE_FORMAT(d.thoi_gian_mua, '%Y-%m-%d %H:%i:%s') as thoi_gian_mua, DATE_FORMAT(d.thoi_gian_giao, '%Y-%m-%d %H:%i:%s') as thoi_gian_giao, k.ho_ten as ten_khach_hang, k.so_dien_thoai as khach_so_dien_thoai FROM donhang d LEFT JOIN khachhang k ON d.ma_khach_hang = k.ma_khach_hang WHERE d.ma_don_hang = ?",
       [id]
     );
 
@@ -225,7 +226,7 @@ export const searchOrders = async (req, res) => {
     if (!q) return res.json([]);
     const search = `%${q}%`;
     const [rows] = await db.query(
-      `SELECT d.ma_don_hang, d.ma_khach_hang, d.so_dien_thoai_nhan, d.dia_chi_nhan, d.tong_tien, d.trang_thai, d.tien_ship, DATE_FORMAT(d.thoi_gian_mua, '%Y-%m-%d %H:%i:%s') as thoi_gian_mua, DATE_FORMAT(d.thoi_gian_giao, '%Y-%m-%d %H:%i:%s') as thoi_gian_giao FROM donhang d LEFT JOIN khachhang k ON d.ma_khach_hang = k.ma_khach_hang
+      `SELECT d.ma_don_hang, d.ma_khach_hang, d.so_dien_thoai_nhan, d.dia_chi_nhan, d.tong_tien, d.trang_thai, d.tien_ship, d.tien_dong_goi, DATE_FORMAT(d.thoi_gian_mua, '%Y-%m-%d %H:%i:%s') as thoi_gian_mua, DATE_FORMAT(d.thoi_gian_giao, '%Y-%m-%d %H:%i:%s') as thoi_gian_giao FROM donhang d LEFT JOIN khachhang k ON d.ma_khach_hang = k.ma_khach_hang
        LEFT JOIN chitiet_donhang c ON c.ma_don_hang = d.ma_don_hang
        LEFT JOIN sanpham s ON s.ma_san_pham = c.ma_san_pham
        WHERE d.ma_don_hang LIKE ? OR k.ho_ten LIKE ? OR s.ten_san_pham LIKE ?
@@ -264,6 +265,7 @@ export const updateOrderStatus = async (req, res) => {
 
       const prevStatus = current.trang_thai;
       let deductions = null;
+      let packaged_total_local = 0;
 
       // If switching to 'dang_giao' and packaged_items provided, validate and deduct packaged materials from warehouse
       if (trang_thai === 'dang_giao' && Array.isArray(packaged_items) && packaged_items.length > 0) {
@@ -306,11 +308,13 @@ export const updateOrderStatus = async (req, res) => {
             const masterTotalPrice = Number(info.gia_nhap || 0);
             let perUnitPrice = 0;
             if (masterTotalQty > 0) perUnitPrice = masterTotalPrice / masterTotalQty;
-
             await connection.query(
               "INSERT INTO nhapkho_nguyenlieu (ma_nguyen_lieu, so_luong_nhap, don_vi_id, don_gia, ngay_nhap) VALUES (?, ?, ?, ?, NOW())",
               [k, -deduct, storeUnitId, perUnitPrice]
             );
+
+            // accumulate packaged total value (deduct quantity * per-unit price)
+            packaged_total_local += deduct * perUnitPrice;
 
             deductions.push({ ma_nguyen_lieu: k, deducted: deduct, before });
           }
@@ -469,10 +473,19 @@ export const updateOrderStatus = async (req, res) => {
       }
 
       // Cập nhật trạng thái đơn hàng (và tiền ship nếu có)
+      // include tien_dong_goi if packaged items were provided
       if (typeof tien_ship !== 'undefined' && tien_ship !== null) {
-        await connection.query("UPDATE donhang SET trang_thai = ?, tien_ship = ? WHERE ma_don_hang = ?", [trang_thai, tien_ship, id]);
+        if (packaged_total_local && packaged_total_local > 0) {
+          await connection.query("UPDATE donhang SET trang_thai = ?, tien_ship = ?, tien_dong_goi = ? WHERE ma_don_hang = ?", [trang_thai, tien_ship, packaged_total_local, id]);
+        } else {
+          await connection.query("UPDATE donhang SET trang_thai = ?, tien_ship = ? WHERE ma_don_hang = ?", [trang_thai, tien_ship, id]);
+        }
       } else {
-        await connection.query("UPDATE donhang SET trang_thai = ? WHERE ma_don_hang = ?", [trang_thai, id]);
+        if (packaged_total_local && packaged_total_local > 0) {
+          await connection.query("UPDATE donhang SET trang_thai = ?, tien_dong_goi = ? WHERE ma_don_hang = ?", [trang_thai, packaged_total_local, id]);
+        } else {
+          await connection.query("UPDATE donhang SET trang_thai = ? WHERE ma_don_hang = ?", [trang_thai, id]);
+        }
       }
 
       await connection.commit();

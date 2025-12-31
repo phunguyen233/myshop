@@ -598,8 +598,8 @@ const Orders: React.FC = () => {
                             </table>
                         </div>
                         <div className="text-right pt-4 border-t border-border">
-                            <p className="font-medium text-foreground">Tiền ship: {Number(detail.tien_ship || 0).toLocaleString('vi-VN')}₫</p>
-                            <p className="font-medium text-foreground">Tổng đóng gói: {Number(detail.packaged_total || 0).toLocaleString('vi-VN')}₫</p>
+                            <p className="font-medium text-foreground">Tiền ship: {Number(detail.tien_ship || detail.tien_ship === 0 ? detail.tien_ship : 0).toLocaleString('vi-VN')}₫</p>
+                            <p className="font-medium text-foreground">Tổng đóng gói: {Number(detail.tien_dong_goi ?? detail.packaged_total ?? 0).toLocaleString('vi-VN')}₫</p>
                             <p className="font-bold text-foreground">Tổng hàng: {Number(detail.tong_tien || 0).toLocaleString('vi-VN')}₫</p>
                             <div className="flex justify-end items-center gap-2">
                                 <button onClick={() => setDetail(null)} className="bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded mt-2 transition">Đóng</button>
