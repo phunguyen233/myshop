@@ -7,9 +7,9 @@ import { receiptAPI } from "../api/receiptAPI";
 const Ingredients: React.FC = () => {
   const [items, setItems] = useState<any[]>([]);
   const [units, setUnits] = useState<any[]>([]);
-  const [form, setForm] = useState({ ten_nguyen_lieu: "", so_luong_ton: 0, don_vi_id: 0, gia_nhap: 0, loai_nguyen_lieu: 'che_bien' });
+  const [form, setForm] = useState<any>({ ten_nguyen_lieu: "", so_luong_ton: '', don_vi_id: 0, gia_nhap: '', loai_nguyen_lieu: 'che_bien' });
   const [editingId, setEditingId] = useState<number | null>(null);
-  const [receipt, setReceipt] = useState({ ma_nguyen_lieu: 0, so_luong_nhap: 0, don_vi_id: 0, don_gia: 0 });
+  const [receipt, setReceipt] = useState<any>({ ma_nguyen_lieu: 0, so_luong_nhap: '', don_vi_id: 0, don_gia: '' });
   const [addLoading, setAddLoading] = useState(false);
   const [addError, setAddError] = useState("");
   const [receiptLoading, setReceiptLoading] = useState(false);
@@ -65,7 +65,7 @@ const Ingredients: React.FC = () => {
       setAddError("Vui lòng chọn đơn vị");
       return;
     }
-    if (form.so_luong_ton < 0) {
+    if (Number(form.so_luong_ton || 0) < 0) {
       setAddError("Số lượng không được âm");
       return;
     }
@@ -91,7 +91,7 @@ const Ingredients: React.FC = () => {
       (wh || []).forEach((w: any) => { whMap[w.ma_nguyen_lieu] = w; });
       const merged = (list || []).map((it: any) => ({ ...it, __warehouse: whMap[it.ma_nguyen_lieu] || { warehouse_qty: 0, warehouse_value: 0 } })).sort((a: any, b: any) => Number(a.ma_nguyen_lieu) - Number(b.ma_nguyen_lieu));
       setItems(merged);
-      setForm({ ten_nguyen_lieu: "", so_luong_ton: 0, don_vi_id: 0, gia_nhap: 0, loai_nguyen_lieu: 'che_bien' });
+      setForm({ ten_nguyen_lieu: "", so_luong_ton: '', don_vi_id: 0, gia_nhap: '', loai_nguyen_lieu: 'che_bien' });
       setEditingId(null);
       setTimeout(() => setSuccessMsg(""), 3000);
     } catch (err: any) {
@@ -105,7 +105,7 @@ const Ingredients: React.FC = () => {
   const handleEdit = (item: any, fromWarehouse: boolean = false) => {
     setEditingId(item.ma_nguyen_lieu);
     setEditFromWarehouse(!!fromWarehouse);
-    setForm({ ten_nguyen_lieu: item.ten_nguyen_lieu, so_luong_ton: item.so_luong_ton || 0, don_vi_id: item.don_vi_id || 0, gia_nhap: item.gia_nhap || 0, loai_nguyen_lieu: item.loai_nguyen_lieu || 'che_bien' });
+    setForm({ ten_nguyen_lieu: item.ten_nguyen_lieu, so_luong_ton: item.so_luong_ton ?? '', don_vi_id: item.don_vi_id || 0, gia_nhap: item.gia_nhap ?? '', loai_nguyen_lieu: item.loai_nguyen_lieu || 'che_bien' });
     if (fromWarehouse) {
       const whQty = (item.__warehouse && Number(item.__warehouse.warehouse_qty)) || 0;
       setWarehouseEditQty(whQty);
@@ -145,7 +145,7 @@ const Ingredients: React.FC = () => {
       setReceiptError("Vui lòng chọn nguyên liệu");
       return;
     }
-    if (receipt.so_luong_nhap <= 0) {
+    if (Number(receipt.so_luong_nhap || 0) <= 0) {
       setReceiptError("Số lượng nhập phải lớn hơn 0");
       return;
     }
@@ -167,7 +167,7 @@ const Ingredients: React.FC = () => {
       (wh || []).forEach((w: any) => { whMap[w.ma_nguyen_lieu] = w; });
       const merged = (list || []).map((it: any) => ({ ...it, __warehouse: whMap[it.ma_nguyen_lieu] || { warehouse_qty: 0, warehouse_value: 0 } }));
       setItems(merged);
-      setReceipt({ ma_nguyen_lieu: 0, so_luong_nhap: 0, don_vi_id: 0, don_gia: 0 });
+      setReceipt({ ma_nguyen_lieu: 0, so_luong_nhap: '', don_vi_id: 0, don_gia: '' });
       setShowReceiptModal(false);
       setSuccessMsg("Nhập kho nguyên liệu thành công!");
       // notify dashboard/statistics to refresh totals (inventory cost changed)
@@ -252,12 +252,12 @@ const Ingredients: React.FC = () => {
       )}
 
       <div className="w-full flex flex-col items-center gap-4">
-        <div className="flex items-center gap-3">
-          <button onClick={() => setViewMode('warehouse')} className={`min-w-[140px] px-4 py-2 rounded-lg font-medium text-center ${viewMode === 'warehouse' ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-700'}`}>Kho</button>
-          <button onClick={() => setViewMode('ingredients')} className={`min-w-[140px] px-4 py-2 rounded-lg font-medium text-center ${viewMode === 'ingredients' ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-700'}`}>Nguyên liệu</button>
+          <div className="flex items-center gap-3">
+          <button onClick={() => setViewMode('warehouse')} className={`min-w-[140px] px-4 py-2 rounded-lg font-medium text-center ${viewMode === 'warehouse' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700'}`}>Kho</button>
+          <button onClick={() => setViewMode('ingredients')} className={`min-w-[140px] px-4 py-2 rounded-lg font-medium text-center ${viewMode === 'ingredients' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700'}`}>Nguyên liệu</button>
         </div>
 
-        <div className="w-full flex items-center justify-between">
+            <div className="w-full flex items-center justify-between">
           <div className="flex items-center gap-2">
             <input
               type="text"
@@ -272,7 +272,7 @@ const Ingredients: React.FC = () => {
             {viewMode === 'ingredients' ? (
               <button onClick={openAddModal} className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg font-semibold transition shadow-sm">Thêm nguyên liệu</button>
             ) : (
-              <button onClick={() => setShowReceiptModal(true)} className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded-lg font-semibold transition shadow-sm">Nhập kho</button>
+              <button onClick={() => setShowReceiptModal(true)} className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg font-semibold transition shadow-sm">Nhập kho</button>
             )}
           </div>
         </div>
@@ -284,9 +284,9 @@ const Ingredients: React.FC = () => {
             <h2 className="text-xl font-semibold mb-4">Danh sách nguyên liệu</h2>
             <div className="flex justify-center mb-4">
               <div className="inline-flex rounded-md shadow-sm" role="tablist">
-                <button onClick={() => setSelectedType('che_bien')} className={`px-4 py-2 border ${selectedType === 'che_bien' ? 'bg-indigo-600 text-white' : 'bg-white text-gray-800'}`}>Chế biến</button>
-                <button onClick={() => setSelectedType('dong_goi')} className={`px-4 py-2 border ${selectedType === 'dong_goi' ? 'bg-indigo-600 text-white' : 'bg-white text-gray-800'}`}>Đóng gói</button>
-                <button onClick={() => setSelectedType('all')} className={`px-4 py-2 border ${selectedType === 'all' ? 'bg-gray-200 text-gray-900' : 'bg-white text-gray-800'}`}>Tất cả</button>
+                    <button onClick={() => setSelectedType('all')} className={`px-4 py-2 border whitespace-nowrap hover:bg-gray-100 ${selectedType === 'all' ? 'bg-gray-200 text-gray-900' : 'bg-white text-gray-800'}`}>Tất cả</button>
+                    <button onClick={() => setSelectedType('che_bien')} className={`px-4 py-2 border whitespace-nowrap hover:bg-gray-100 ${selectedType === 'che_bien' ? 'bg-gray-200 text-gray-900' : 'bg-white text-gray-800'}`}>Chế biến</button>
+                    <button onClick={() => setSelectedType('dong_goi')} className={`px-4 py-2 border whitespace-nowrap hover:bg-gray-100 ${selectedType === 'dong_goi' ? 'bg-gray-200 text-gray-900' : 'bg-white text-gray-800'}`}>Đóng gói</button>
               </div>
             </div>
             <div className="overflow-x-auto rounded-lg border border-border">
@@ -315,7 +315,7 @@ const Ingredients: React.FC = () => {
                         <td className="p-3 text-foreground font-medium">{i.ten_nguyen_lieu}</td>
                         <td className="p-3 text-right text-foreground">{fmtQty(i.so_luong_ton)}</td>
                         <td className="p-3 text-foreground">{i.don_vi}</td>
-                        <td className="p-3 text-right text-foreground">{(i.gia_nhap || 0).toLocaleString('vi-VN')}₫</td>
+                        <td className="p-3 text-right text-foreground">{Number(i.gia_nhap || 0).toLocaleString('vi-VN',{maximumFractionDigits:0})}₫</td>
                         <td className="p-3 text-center">
                           <div className="flex items-center justify-center gap-2">
                             <button onClick={() => handleEdit(i)} className="px-3 py-1 rounded bg-white border border-border hover:bg-green-600 hover:text-white text-foreground text-xs">Sửa</button>
@@ -334,9 +334,9 @@ const Ingredients: React.FC = () => {
             <h2 className="text-xl font-semibold mb-4">Kho nguyên liệu</h2>
             <div className="flex justify-center mb-4">
               <div className="inline-flex rounded-md shadow-sm" role="tablist">
-                <button onClick={() => setSelectedType('che_bien')} className={`px-4 py-2 border ${selectedType === 'che_bien' ? 'bg-indigo-600 text-white' : 'bg-white text-gray-800'}`}>Chế biến</button>
-                <button onClick={() => setSelectedType('dong_goi')} className={`px-4 py-2 border ${selectedType === 'dong_goi' ? 'bg-indigo-600 text-white' : 'bg-white text-gray-800'}`}>Đóng gói</button>
-                <button onClick={() => setSelectedType('all')} className={`px-4 py-2 border ${selectedType === 'all' ? 'bg-gray-200 text-gray-900' : 'bg-white text-gray-800'}`}>Tất cả</button>
+                <button onClick={() => setSelectedType('all')} className={`px-4 py-2 border whitespace-nowrap hover:bg-gray-100 ${selectedType === 'all' ? 'bg-gray-200 text-gray-900' : 'bg-white text-gray-800'}`}>Tất cả</button>
+                <button onClick={() => setSelectedType('che_bien')} className={`px-4 py-2 border whitespace-nowrap hover:bg-gray-100 ${selectedType === 'che_bien' ? 'bg-gray-200 text-gray-900' : 'bg-white text-gray-800'}`}>Chế biến</button>
+                <button onClick={() => setSelectedType('dong_goi')} className={`px-4 py-2 border whitespace-nowrap hover:bg-gray-100 ${selectedType === 'dong_goi' ? 'bg-gray-200 text-gray-900' : 'bg-white text-gray-800'}`}>Đóng gói</button>
               </div>
             </div>
             <div className="overflow-x-auto rounded-lg border border-border">
@@ -376,7 +376,7 @@ const Ingredients: React.FC = () => {
                               const masterTotalPrice = Number(i.gia_nhap) || 0;
                               const warehouseQty = Number(wh.warehouse_qty) || 0;
                               const computed = masterQty > 0 ? (warehouseQty / masterQty) * masterTotalPrice : 0;
-                              return Number(computed || 0).toLocaleString('vi-VN') + '₫';
+                              return Number(computed || 0).toLocaleString('vi-VN',{maximumFractionDigits:0}) + '₫';
                             })()}
                           </td>
                           <td className="p-3 text-center">
@@ -408,7 +408,7 @@ const Ingredients: React.FC = () => {
               <button onClick={() => setForm({ ...form, loai_nguyen_lieu: 'dong_goi' })} className={`px-3 py-1 rounded border ${form.loai_nguyen_lieu === 'dong_goi' ? 'bg-indigo-600 text-white' : 'bg-white text-gray-800'}`}>Đóng gói</button>
             </div>
             {addError && <div className="bg-red-100 border border-red-400 text-red-700 px-3 py-2 rounded mb-3 text-sm">{addError}</div>}
-            <div className="space-y-3">
+              <div className="space-y-3">
               <div>
                 <label className="block text-sm font-medium mb-1">Tên nguyên liệu</label>
                 <input value={form.ten_nguyen_lieu} onChange={e => setForm({ ...form, ten_nguyen_lieu: e.target.value })} className="w-full border border-input rounded px-3 py-2 text-sm" />
@@ -416,7 +416,7 @@ const Ingredients: React.FC = () => {
               <div className="grid grid-cols-2 gap-2">
                 <div>
                   <label className="block text-sm font-medium mb-1">Số lượng ban đầu</label>
-                  <input type="number" min={0} value={form.so_luong_ton} onChange={e => setForm({ ...form, so_luong_ton: Number(e.target.value) })} className="w-full border border-input rounded px-3 py-2 text-sm" />
+                  <input type="number" min={0} value={form.so_luong_ton ?? ''} onChange={e => setForm({ ...form, so_luong_ton: e.target.value === '' ? '' : Number(e.target.value) })} className="w-full border border-input rounded px-3 py-2 text-sm" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium mb-1">Đơn vị</label>
@@ -428,7 +428,7 @@ const Ingredients: React.FC = () => {
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1">Giá tổng (VNĐ) — cho số lượng đã nhập</label>
-                <input type="number" min={0} step="0.01" value={form.gia_nhap} onChange={e => setForm({ ...form, gia_nhap: Number(e.target.value) })} className="w-full border border-input rounded px-3 py-2 text-sm" />
+                <input type="number" min={0} step="0.01" value={form.gia_nhap ?? ''} onChange={e => setForm({ ...form, gia_nhap: e.target.value === '' ? '' : Number(e.target.value) })} className="w-full border border-input rounded px-3 py-2 text-sm" />
               </div>
               <div className="flex gap-2 justify-end">
                 <button className="px-4 py-2 rounded border" onClick={() => setShowAddModal(false)}>Hủy</button>
@@ -456,10 +456,10 @@ const Ingredients: React.FC = () => {
                 )}
               </div>
               {editFromWarehouse ? (
-                <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-2 gap-2">
                   <div>
                     <label className="block text-sm font-medium mb-1">Số lượng (kho)</label>
-                    <input type="number" min={0} step="0.0001" value={warehouseEditQty} onChange={e => setWarehouseEditQty(Number(e.target.value))} className="w-full border border-input rounded px-3 py-2 text-sm" />
+                    <input type="number" min={0} step="0.0001" value={warehouseEditQty ?? ''} onChange={e => setWarehouseEditQty(e.target.value === '' ? 0 : Number(e.target.value))} className="w-full border border-input rounded px-3 py-2 text-sm" />
                   </div>
                   <div>
                     <label className="block text-sm font-medium mb-1">Đơn vị</label>
@@ -473,7 +473,7 @@ const Ingredients: React.FC = () => {
                 <div className="grid grid-cols-2 gap-2">
                   <div>
                     <label className="block text-sm font-medium mb-1">Số lượng</label>
-                    <input type="number" min={0} value={form.so_luong_ton} onChange={e => setForm({ ...form, so_luong_ton: Number(e.target.value) })} className="w-full border border-input rounded px-3 py-2 text-sm" />
+                    <input type="number" min={0} value={form.so_luong_ton ?? ''} onChange={e => setForm({ ...form, so_luong_ton: e.target.value === '' ? '' : Number(e.target.value) })} className="w-full border border-input rounded px-3 py-2 text-sm" />
                   </div>
                   <div>
                     <label className="block text-sm font-medium mb-1">Đơn vị</label>
@@ -551,19 +551,19 @@ const Ingredients: React.FC = () => {
                   {items.map(i => <option key={i.ma_nguyen_lieu} value={i.ma_nguyen_lieu}>{i.ten_nguyen_lieu}</option>)}
                 </select>
               </div>
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="block text-sm font-medium mb-1">Số lượng nhập</label>
-                  <input type="number" min={0} step="0.01" value={receipt.so_luong_nhap} onChange={e => setReceipt({ ...receipt, so_luong_nhap: Number(e.target.value) })} className="w-full border border-input rounded px-3 py-2 text-sm" />
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Số lượng nhập</label>
+                    <input type="number" min={0} step="0.01" value={receipt.so_luong_nhap ?? ''} onChange={e => setReceipt({ ...receipt, so_luong_nhap: e.target.value === '' ? '' : Number(e.target.value) })} className="w-full border border-input rounded px-3 py-2 text-sm" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Đơn vị</label>
+                    <select value={receipt.don_vi_id} onChange={e => setReceipt({ ...receipt, don_vi_id: Number(e.target.value) })} className="w-full border border-input rounded px-3 py-2 text-sm">
+                      <option value={0}>Đơn vị</option>
+                      {units.map(u => <option key={u.id} value={u.id}>{u.ten}</option>)}
+                    </select>
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">Đơn vị</label>
-                  <select value={receipt.don_vi_id} onChange={e => setReceipt({ ...receipt, don_vi_id: Number(e.target.value) })} className="w-full border border-input rounded px-3 py-2 text-sm">
-                    <option value={0}>Đơn vị</option>
-                    {units.map(u => <option key={u.id} value={u.id}>{u.ten}</option>)}
-                  </select>
-                </div>
-              </div>
               {/* Đơn giá sẽ được tính tự động theo danh sách nguyên liệu (giá/1kg) */}
               {getReceiptPreview() && <div className="text-sm text-muted-foreground">Sẽ cộng: {getReceiptPreview()}</div>}
               <div className="flex gap-2 justify-end">
@@ -611,8 +611,8 @@ const Ingredients: React.FC = () => {
                               <td className="p-3 text-foreground">{selectedReceiptIngredientName}</td>
                               <td className="p-3 text-right text-foreground">{fmtQty(qty)}</td>
                               <td className="p-3 text-foreground">{unit.ten}</td>
-                              <td className="p-3 text-right text-foreground">{Number(unitPrice || 0).toLocaleString('vi-VN')}₫</td>
-                              <td className="p-3 text-right text-foreground">{Number(total || 0).toLocaleString('vi-VN')}₫</td>
+                              <td className="p-3 text-right text-foreground">{Number(unitPrice || 0).toLocaleString('vi-VN',{maximumFractionDigits:0})}₫</td>
+                              <td className="p-3 text-right text-foreground">{Number(total || 0).toLocaleString('vi-VN',{maximumFractionDigits:0})}₫</td>
                             </tr>
                           );
                         })
