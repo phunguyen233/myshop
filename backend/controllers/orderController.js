@@ -265,6 +265,84 @@ export const updateOrderStatus = async (req, res) => {
       const prevStatus = current.trang_thai;
       let deductions = null;
 
+      // If switching to 'dang_giao' and packaged_items provided, validate and deduct packaged materials from warehouse
+      if (trang_thai === 'dang_giao' && Array.isArray(packaged_items) && packaged_items.length > 0) {
+        // aggregate quantities per ma_nguyen_lieu
+        const pkgMap = {};
+        for (const it of packaged_items) {
+          const id = it.ma_nguyen_lieu;
+          const q = Number(it.so_luong || 0);
+          if (!id || q <= 0) continue;
+          pkgMap[id] = (pkgMap[id] || 0) + q;
+        }
+        const pkgKeys = Object.keys(pkgMap);
+        if (pkgKeys.length > 0) {
+          const placeholders = pkgKeys.map(() => '?').join(',');
+          const [stocks] = await connection.query(`SELECT ma_nguyen_lieu, so_luong_ton, gia_nhap, don_vi_id FROM nguyenlieu WHERE ma_nguyen_lieu IN (${placeholders}) FOR UPDATE`, pkgKeys);
+          const stockMap = {};
+          for (const s of stocks) stockMap[s.ma_nguyen_lieu] = { qty: Number(s.so_luong_ton || 0), gia_nhap: Number(s.gia_nhap || 0), don_vi_id: s.don_vi_id };
+          const shortages = [];
+          for (const k of pkgKeys) {
+            const need = Number(pkgMap[k] || 0);
+            const have = (stockMap[k] && stockMap[k].qty) || 0;
+            if (have < need) shortages.push({ ma_nguyen_lieu: k, need, have });
+          }
+          if (shortages.length > 0) {
+            await connection.rollback();
+            return res.status(409).json({ message: 'Nguyên liệu đóng gói không đủ trong kho', shortages });
+          }
+
+          // enough stock -> insert negative receipt rows to deduct
+          deductions = deductions || [];
+          const nlInfoMap = {};
+          for (const s of stocks) nlInfoMap[s.ma_nguyen_lieu] = s;
+          for (const k of pkgKeys) {
+            const deduct = Number(pkgMap[k] || 0);
+            if (deduct <= 0) continue;
+            const info = nlInfoMap[k] || {};
+            const before = Number(info.so_luong_ton || 0);
+            const storeUnitId = info.don_vi_id || null;
+            const masterTotalQty = Number(info.so_luong_ton || 0);
+            const masterTotalPrice = Number(info.gia_nhap || 0);
+            let perUnitPrice = 0;
+            if (masterTotalQty > 0) perUnitPrice = masterTotalPrice / masterTotalQty;
+
+            await connection.query(
+              "INSERT INTO nhapkho_nguyenlieu (ma_nguyen_lieu, so_luong_nhap, don_vi_id, don_gia, ngay_nhap) VALUES (?, ?, ?, ?, NOW())",
+              [k, -deduct, storeUnitId, perUnitPrice]
+            );
+
+            deductions.push({ ma_nguyen_lieu: k, deducted: deduct, before });
+          }
+
+          // fetch after-values for packaged deductions
+          if (deductions.length > 0) {
+            const ids = deductions.map(d => d.ma_nguyen_lieu);
+            const placeholders2 = ids.map(() => '?').join(',');
+            const [afterRows] = await connection.query(
+              `SELECT n.ma_nguyen_lieu,
+                      COALESCE(SUM(nh.so_luong_nhap * COALESCE(din.he_so_quy_doi,1) / COALESCE(dnl.he_so_quy_doi,1)),0) AS kho_qty,
+                      dnl.ten as don_vi, n.ten_nguyen_lieu
+               FROM nguyenlieu n
+               LEFT JOIN nhapkho_nguyenlieu nh ON nh.ma_nguyen_lieu = n.ma_nguyen_lieu
+               LEFT JOIN donvi dnl ON n.don_vi_id = dnl.id
+               LEFT JOIN donvi din ON din.id = nh.don_vi_id
+               WHERE n.ma_nguyen_lieu IN (${placeholders2})
+               GROUP BY n.ma_nguyen_lieu, dnl.ten, n.ten_nguyen_lieu`,
+              ids
+            );
+            const afterMap = {};
+            for (const r of afterRows) afterMap[r.ma_nguyen_lieu] = r;
+            for (const dd of deductions) {
+              const a = afterMap[dd.ma_nguyen_lieu] || {};
+              dd.after = Number(a.kho_qty || 0);
+              dd.ten_nguyen_lieu = a.ten_nguyen_lieu || null;
+              dd.don_vi = a.don_vi || null;
+            }
+          }
+        }
+      }
+
       // Nếu trạng thái trước đó khác 'da_thanh_toan' và hiện đang chuyển thành 'da_thanh_toan', kiểm tra và trừ nguyên liệu theo công thức
       if (prevStatus !== 'da_thanh_toan' && trang_thai === 'da_thanh_toan') {
         // Lấy các sản phẩm trong đơn

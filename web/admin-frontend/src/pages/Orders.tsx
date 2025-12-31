@@ -165,6 +165,33 @@ const Orders: React.FC = () => {
         }
     };
 
+    const handleAddPackagedItem = async () => {
+        if (!selectedPackagingId) return alert('Vui lòng chọn nguyên liệu đóng gói');
+        if (!packQty || packQty <= 0) return alert('Số lượng phải lớn hơn 0');
+        try {
+            // get current warehouse aggregated quantities
+            const wh = await ingredientAPI.getWarehouse();
+            const w = (wh || []).find((x:any) => Number(x.ma_nguyen_lieu) === Number(selectedPackagingId));
+            const available = w ? Number(w.warehouse_qty || 0) : (packagingOptions.find(p => p.ma_nguyen_lieu === selectedPackagingId)?.so_luong_ton || 0);
+            if (available < packQty) {
+                return alert('Trong kho không đủ nguyên liệu đóng gói cho số lượng này');
+            }
+
+            const p = packagingOptions.find(x => x.ma_nguyen_lieu === selectedPackagingId);
+            if (!p) return alert('Nguyên liệu đóng gói không tồn tại');
+            const perUnit = (Number(p.gia_nhap || 0) && Number(p.so_luong_ton || 0) > 0) ? (Number(p.gia_nhap || 0) / Number(p.so_luong_ton || 1)) : Number(p.gia_nhap || 0);
+            const existing = packagedItems.find(it => it.ma_nguyen_lieu === selectedPackagingId);
+            if (existing) {
+                setPackagedItems(packagedItems.map(it => it.ma_nguyen_lieu === existing.ma_nguyen_lieu ? { ...it, so_luong: it.so_luong + packQty } : it));
+            } else {
+                setPackagedItems([...packagedItems, { ma_nguyen_lieu: p.ma_nguyen_lieu, ten_nguyen_lieu: p.ten_nguyen_lieu, so_luong: packQty, don_gia: perUnit }]);
+            }
+        } catch (e) {
+            console.error('Lỗi kiểm tra kho đóng gói', e);
+            alert('Không thể kiểm tra kho đóng gói');
+        }
+    };
+
     const handleUpdateStatus = async () => {
         if (!detail?.ma_don_hang) return;
         try {
@@ -510,18 +537,7 @@ const Orders: React.FC = () => {
                                                                 ))}
                                                             </select>
                                                             <input type="number" min={1} value={packQty} onChange={(e) => setPackQty(Number(e.target.value))} className="w-20 border border-input rounded px-2 py-1 text-sm text-center" />
-                                                            <button onClick={() => {
-                                                                if (!selectedPackagingId) return alert('Vui lòng chọn nguyên liệu đóng gói');
-                                                                const p = packagingOptions.find(x => x.ma_nguyen_lieu === selectedPackagingId);
-                                                                if (!p) return;
-                                                                const perUnit = (Number(p.gia_nhap || 0) && Number(p.so_luong_ton || 0) > 0) ? (Number(p.gia_nhap || 0) / Number(p.so_luong_ton || 1)) : Number(p.gia_nhap || 0);
-                                                                const existing = packagedItems.find(it => it.ma_nguyen_lieu === selectedPackagingId);
-                                                                if (existing) {
-                                                                    setPackagedItems(packagedItems.map(it => it.ma_nguyen_lieu === existing.ma_nguyen_lieu ? { ...it, so_luong: it.so_luong + packQty } : it));
-                                                                } else {
-                                                                    setPackagedItems([...packagedItems, { ma_nguyen_lieu: p.ma_nguyen_lieu, ten_nguyen_lieu: p.ten_nguyen_lieu, so_luong: packQty, don_gia: perUnit }]);
-                                                                }
-                                                            }} className="px-3 py-2 bg-blue-600 text-white rounded">Thêm</button>
+                                                            <button onClick={handleAddPackagedItem} className="px-3 py-2 bg-blue-600 text-white rounded">Thêm</button>
                                                         </div>
                                                         {packagedItems.length > 0 && (
                                                             <div className="mt-2">
