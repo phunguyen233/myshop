@@ -332,6 +332,13 @@ const Ingredients: React.FC = () => {
         ) : (
           <>
             <h2 className="text-xl font-semibold mb-4">Kho nguyên liệu</h2>
+            <div className="flex justify-center mb-4">
+              <div className="inline-flex rounded-md shadow-sm" role="tablist">
+                <button onClick={() => setSelectedType('che_bien')} className={`px-4 py-2 border ${selectedType === 'che_bien' ? 'bg-indigo-600 text-white' : 'bg-white text-gray-800'}`}>Chế biến</button>
+                <button onClick={() => setSelectedType('dong_goi')} className={`px-4 py-2 border ${selectedType === 'dong_goi' ? 'bg-indigo-600 text-white' : 'bg-white text-gray-800'}`}>Đóng gói</button>
+                <button onClick={() => setSelectedType('all')} className={`px-4 py-2 border ${selectedType === 'all' ? 'bg-gray-200 text-gray-900' : 'bg-white text-gray-800'}`}>Tất cả</button>
+              </div>
+            </div>
             <div className="overflow-x-auto rounded-lg border border-border">
               <table className="w-full text-left text-sm">
                 <thead className="bg-muted/50 text-muted-foreground">

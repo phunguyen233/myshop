@@ -277,13 +277,13 @@ const Orders: React.FC = () => {
 
                     <div className="mt-3">
                         <div className="relative inline-block">
-                            <button onClick={() => setFilterOpen(v => !v)} className="px-4 py-2 rounded border bg-white text-gray-800">
+                            <button onClick={() => setFilterOpen(v => !v)} className="px-4 py-2 rounded border bg-white text-gray-800 min-w-[160px] text-left">
                                 {statusLabels[selectedStatus] || 'Bộ lọc'}
                             </button>
                             {filterOpen && (
-                                <div className="absolute mt-2 bg-white border border-border rounded shadow-md z-50">
+                                <div className="absolute mt-2 bg-white border border-border rounded shadow-md z-50 w-48">
                                     {['all', 'da_thanh_toan', 'dang_giao', 'hoan_tat', 'huy', 'cho_xu_ly'].map((s:any) => (
-                                        <button key={s} onClick={() => { setSelectedStatus(s as any); setFilterOpen(false); }} className={`block w-full text-left px-4 py-2 hover:bg-muted/50 ${selectedStatus === s ? 'bg-muted/50 font-semibold' : ''}`}>
+                                        <button key={s} onClick={() => { setSelectedStatus(s as any); setFilterOpen(false); }} className={`block w-full text-left px-4 py-2 whitespace-nowrap hover:bg-gray-100 ${selectedStatus === s ? 'bg-muted/50 font-semibold' : ''}`}>
                                             {statusLabels[s] || s}
                                         </button>
                                     ))}
@@ -503,13 +503,13 @@ const Orders: React.FC = () => {
                                                     <div>
                                                         <label className="text-sm font-medium text-muted-foreground">Nguyên liệu đóng gói</label>
                                                         <div className="flex items-center gap-2 mt-1">
-                                                            <select value={selectedPackagingId ?? ''} onChange={(e) => setSelectedPackagingId(e.target.value ? Number(e.target.value) : null)} className="border border-input rounded px-3 py-2">
+                                                            <select value={selectedPackagingId ?? ''} onChange={(e) => setSelectedPackagingId(e.target.value ? Number(e.target.value) : null)} className="border border-input rounded px-2 py-1 w-40 truncate">
                                                                 <option value="">-- Chọn nguyên liệu đóng gói --</option>
                                                                 {packagingOptions.map(p => (
                                                                     <option key={p.ma_nguyen_lieu} value={p.ma_nguyen_lieu}>{p.ten_nguyen_lieu}</option>
                                                                 ))}
                                                             </select>
-                                                            <input type="number" min={1} value={packQty} onChange={(e) => setPackQty(Number(e.target.value))} className="w-24 border border-input rounded px-3 py-2" />
+                                                            <input type="number" min={1} value={packQty} onChange={(e) => setPackQty(Number(e.target.value))} className="w-20 border border-input rounded px-2 py-1 text-sm text-center" />
                                                             <button onClick={() => {
                                                                 if (!selectedPackagingId) return alert('Vui lòng chọn nguyên liệu đóng gói');
                                                                 const p = packagingOptions.find(x => x.ma_nguyen_lieu === selectedPackagingId);
@@ -527,16 +527,22 @@ const Orders: React.FC = () => {
                                                             <div className="mt-2">
                                                                 <table className="w-full text-sm">
                                                                     <thead>
-                                                                        <tr className="text-muted-foreground"><th className="p-2 text-left">Nguyên liệu</th><th className="p-2 text-left">Số lượng</th><th className="p-2 text-left">Đơn giá</th><th className="p-2 text-left">Thành tiền</th><th className="p-2 text-left">X</th></tr>
+                                                                        <tr className="text-muted-foreground">
+                                                                            <th className="p-2 text-left w-[40%]">Nguyên liệu</th>
+                                                                            <th className="p-2 text-center w-20">Số lượng</th>
+                                                                            <th className="p-2 text-right w-28">Đơn giá</th>
+                                                                            <th className="p-2 text-right w-28">Thành tiền</th>
+                                                                            <th className="p-2 text-center w-16">X</th>
+                                                                        </tr>
                                                                     </thead>
                                                                     <tbody>
                                                                         {packagedItems.map((it, idx) => (
                                                                             <tr key={idx} className="border-t">
-                                                                                <td className="p-2">{it.ten_nguyen_lieu}</td>
-                                                                                <td className="p-2">{it.so_luong}</td>
-                                                                                <td className="p-2">{Number(it.don_gia || 0).toLocaleString('vi-VN')}₫</td>
-                                                                                <td className="p-2">{Number((it.so_luong || 0) * (it.don_gia || 0)).toLocaleString('vi-VN')}₫</td>
-                                                                                <td className="p-2"><button onClick={() => setPackagedItems(packagedItems.filter((_, i) => i !== idx))} className="px-2 py-1 rounded border">Xóa</button></td>
+                                                                                <td className="p-2 max-w-[180px] truncate">{it.ten_nguyen_lieu}</td>
+                                                                                <td className="p-2 text-center">{it.so_luong}</td>
+                                                                                <td className="p-2 text-right">{Number(it.don_gia || 0).toLocaleString('vi-VN')}₫</td>
+                                                                                <td className="p-2 text-right">{Number((it.so_luong || 0) * (it.don_gia || 0)).toLocaleString('vi-VN')}₫</td>
+                                                                                <td className="p-2 text-center"><button onClick={() => setPackagedItems(packagedItems.filter((_, i) => i !== idx))} className="px-2 py-1 rounded border">Xóa</button></td>
                                                                             </tr>
                                                                         ))}
                                                                     </tbody>
@@ -579,7 +585,6 @@ const Orders: React.FC = () => {
                             <p className="font-medium text-foreground">Tiền ship: {Number(detail.tien_ship || 0).toLocaleString('vi-VN')}₫</p>
                             <p className="font-medium text-foreground">Tổng đóng gói: {Number(detail.packaged_total || 0).toLocaleString('vi-VN')}₫</p>
                             <p className="font-bold text-foreground">Tổng hàng: {Number(detail.tong_tien || 0).toLocaleString('vi-VN')}₫</p>
-                            <p className="font-bold text-foreground">Tổng tất cả: {Number((detail.tong_tien || 0) + (detail.packaged_total || 0) + (detail.tien_ship || 0)).toLocaleString('vi-VN')}₫</p>
                             <div className="flex justify-end items-center gap-2">
                                 <button onClick={() => setDetail(null)} className="bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded mt-2 transition">Đóng</button>
                             </div>

@@ -242,7 +242,7 @@ export const searchOrders = async (req, res) => {
 export const updateOrderStatus = async (req, res) => {
   try {
     const { id } = req.params;
-    const { trang_thai, tien_ship } = req.body;
+    const { trang_thai, tien_ship, packaged_items } = req.body;
     if (!trang_thai) return res.status(400).json({ message: "Thiếu trạng thái" });
 
     // Kiểm tra giá trị trạng thái có hợp lệ so với enum trong schema
@@ -399,17 +399,65 @@ export const updateOrderStatus = async (req, res) => {
 
       await connection.commit();
 
+      // fetch updated order
       const [[order]] = await db.query(
         "SELECT d.ma_don_hang, d.ma_khach_hang, d.so_dien_thoai_nhan, d.dia_chi_nhan, d.tong_tien, d.trang_thai, d.tien_ship, DATE_FORMAT(d.thoi_gian_mua, '%Y-%m-%d %H:%i:%s') as thoi_gian_mua, DATE_FORMAT(d.thoi_gian_giao, '%Y-%m-%d %H:%i:%s') as thoi_gian_giao, k.ho_ten as ten_khach_hang, k.so_dien_thoai as khach_so_dien_thoai FROM donhang d LEFT JOIN khachhang k ON d.ma_khach_hang = k.ma_khach_hang WHERE d.ma_don_hang = ?",
         [id]
       );
 
-      // include deductions if any
-      if (typeof deductions !== 'undefined' && Array.isArray(deductions) && deductions.length > 0) {
-        res.json({ message: "Cập nhật trạng thái thành công", order, deductions });
-      } else {
-        res.json({ message: "Cập nhật trạng thái thành công", order });
+      // compute product_total
+      const [[pt]] = await db.query("SELECT IFNULL(SUM(so_luong * don_gia),0) AS product_total FROM chitiet_donhang WHERE ma_don_hang = ?", [id]);
+      const product_total = Number((pt && pt.product_total) || 0);
+
+      // compute ingredient_cost similar to getOrders
+      const [rowsIng] = await db.query(
+        `SELECT c.so_luong AS qty_ordered, ct.ma_nguyen_lieu, ct.so_luong_can AS recipe_qty,
+                COALESCE(d.he_so_quy_doi,1) AS recipe_he_so,
+                COALESCE(du.he_so_quy_doi,1) AS nl_he_so,
+                nl.gia_nhap AS nl_total_price, nl.so_luong_ton AS nl_total_qty
+         FROM chitiet_donhang c
+         JOIN congthuc_sanpham ct ON ct.ma_san_pham = c.ma_san_pham
+         LEFT JOIN donvi d ON ct.don_vi_id = d.id
+         LEFT JOIN nguyenlieu nl ON ct.ma_nguyen_lieu = nl.ma_nguyen_lieu
+         LEFT JOIN donvi du ON nl.don_vi_id = du.id
+         WHERE c.ma_don_hang = ?`,
+        [id]
+      );
+
+      let ingredient_cost = 0;
+      for (const r of rowsIng) {
+        const qtyOrdered = Number(r.qty_ordered || 0);
+        const recipeQty = Number(r.recipe_qty || 0);
+        if (qtyOrdered <= 0 || recipeQty <= 0) continue;
+        const recipeHs = Number(r.recipe_he_so || 1) || 1;
+        const nlHs = Number(r.nl_he_so || 1) || 1;
+        const needed = (recipeQty * recipeHs / nlHs) * qtyOrdered;
+        const nlTotalPrice = Number(r.nl_total_price || 0);
+        const nlTotalQty = Number(r.nl_total_qty || 0);
+        let perUnitPrice = 0;
+        if (nlTotalQty > 0) perUnitPrice = nlTotalPrice / nlTotalQty;
+        ingredient_cost += needed * perUnitPrice;
       }
+
+      // compute packaged_total from provided packaged_items (array of { ma_nguyen_lieu, so_luong, don_gia })
+      let packaged_total = 0;
+      if (Array.isArray(packaged_items) && packaged_items.length > 0) {
+        for (const it of packaged_items) {
+          const qty = Number(it.so_luong || 0);
+          const price = Number(it.don_gia || 0);
+          packaged_total += qty * price;
+        }
+      }
+
+      const tien_ship_val = typeof tien_ship !== 'undefined' && tien_ship !== null ? Number(tien_ship) : Number(order.tien_ship || 0);
+      const profit = product_total - ingredient_cost - tien_ship_val - packaged_total;
+
+      // include deductions if any, plus packaged_total and profit
+      const baseResp = { message: "Cập nhật trạng thái thành công", order, packaged_total, profit };
+      if (typeof deductions !== 'undefined' && Array.isArray(deductions) && deductions.length > 0) {
+        baseResp.deductions = deductions;
+      }
+      res.json(baseResp);
     } catch (e) {
       await connection.rollback();
       console.error(e);
