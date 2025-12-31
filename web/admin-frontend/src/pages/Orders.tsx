@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { orderAPI, Order } from "../api/orderAPI";
 import { productAPI } from "../api/productAPI";
 import { customerAPI } from "../api/customerAPI";
+import { ingredientAPI } from "../api/ingredientAPI";
 
 const Orders: React.FC = () => {
     const [orders, setOrders] = useState<Order[]>([]);
@@ -10,7 +11,13 @@ const Orders: React.FC = () => {
     const [selectedStatus, setSelectedStatus] = useState<'all' | 'cho_xu_ly' | 'da_thanh_toan' | 'dang_giao' | 'hoan_tat' | 'huy'>('all');
     const [detail, setDetail] = useState<Order | null>(null);
     const [newStatus, setNewStatus] = useState<string>("");
+    const [filterOpen, setFilterOpen] = useState(false);
+    const [selectedDate, setSelectedDate] = useState<string | null>(null);
     const [shipFee, setShipFee] = useState<number | null>(null);
+    const [packagingOptions, setPackagingOptions] = useState<any[]>([]);
+    const [packagedItems, setPackagedItems] = useState<Array<{ ma_nguyen_lieu: number; ten_nguyen_lieu?: string; so_luong: number; don_gia: number }>>([]);
+    const [selectedPackagingId, setSelectedPackagingId] = useState<number | null>(null);
+    const [packQty, setPackQty] = useState<number>(1);
     const [showAddModal, setShowAddModal] = useState(false);
     const [customers, setCustomers] = useState<any[]>([]);
     const [products, setProducts] = useState<any[]>([]);
@@ -111,17 +118,12 @@ const Orders: React.FC = () => {
     const computeTotal = () => orderItems.reduce((s, it) => s + (it.so_luong || 0) * (it.don_gia || 0), 0);
 
     const handleCreateOrder = async () => {
-        // client-side validation
-        const errs: { customer?: string; items?: string; phone?: string; address?: string } = {};
-        if (!selectedCustomer) errs.customer = 'Vui lòng chọn khách hàng';
+        // client-side validation: only require at least one product line
+        const errs: { items?: string } = {};
         if (!orderItems || orderItems.length === 0) errs.items = 'Vui lòng thêm ít nhất một sản phẩm';
-        const phoneRe = /^[0-9\+\-\s]{7,20}$/;
-        if (!recipientPhone || !phoneRe.test(recipientPhone)) errs.phone = 'Số điện thoại người nhận không hợp lệ';
-        if (!recipientAddress || !recipientAddress.trim()) errs.address = 'Vui lòng nhập địa chỉ nhận';
         if (Object.keys(errs).length) {
-            setOrderFieldErrors(errs);
-            const msgs = Object.values(errs).join('\n');
-            alert('Vui lòng hoàn thành thông tin đơn hàng:\n' + msgs);
+            setOrderFieldErrors(errs as any);
+            alert('Vui lòng thêm ít nhất một sản phẩm để tạo đơn hàng');
             return;
         }
         setOrderFieldErrors({});
@@ -147,6 +149,16 @@ const Orders: React.FC = () => {
             setDetail(data);
             setNewStatus(data.trang_thai || "cho_xu_ly");
             setShipFee(typeof data.tien_ship !== 'undefined' && data.tien_ship !== null ? Number(data.tien_ship) : 0);
+            // load packaging options (ingredients of type 'dong_goi')
+            try {
+                const ingr = await ingredientAPI.getAll();
+                const packs = (ingr || []).filter((i:any) => i.loai_nguyen_lieu === 'dong_goi');
+                setPackagingOptions(packs);
+            } catch (e) {
+                console.error('Không thể tải nguyên liệu đóng gói', e);
+                setPackagingOptions([]);
+            }
+            setPackagedItems([]);
         } catch (err) {
             console.error(err);
             alert("Lỗi khi lấy chi tiết");
@@ -183,12 +195,14 @@ const Orders: React.FC = () => {
                 return;
             }
 
-            const resp: any = await orderAPI.updateStatus(detail.ma_don_hang, newStatus, shipFee ?? undefined);
+            const resp: any = await orderAPI.updateStatus(detail.ma_don_hang, newStatus, shipFee ?? undefined, packagedItems.length ? packagedItems : undefined);
             alert(resp?.message || 'Cập nhật trạng thái thành công');
             // refresh list and detail
             fetchOrders();
             const updated = await orderAPI.getById(detail.ma_don_hang);
-            setDetail(updated);
+            // attach packaged items locally so UI shows packaged totals
+            const packaged_total = packagedItems.reduce((s, it) => s + (it.so_luong || 0) * (it.don_gia || 0), 0);
+            setDetail({ ...updated, packagedItems, packaged_total });
             // If the backend returned deductions, notify Ingredients page to refresh and show summary
             try {
                 if (resp?.deductions && Array.isArray(resp.deductions) && resp.deductions.length > 0) {
@@ -224,8 +238,15 @@ const Orders: React.FC = () => {
         }
     };
 
-    // client-side filter based on selectedStatus
-    const displayedOrders = selectedStatus === 'all' ? orders : orders.filter(o => o.trang_thai === selectedStatus);
+    // client-side filter based on selectedStatus and selectedDate (delivery date YYYY-MM-DD)
+    const displayedOrders = orders.filter(o => {
+        if (selectedStatus !== 'all' && o.trang_thai !== selectedStatus) return false;
+        if (selectedDate) {
+            const t = o.thoi_gian_giao || '';
+            if (!t.startsWith(selectedDate)) return false;
+        }
+        return true;
+    });
 
     return (
         <div className="p-6 space-y-6">
@@ -254,16 +275,26 @@ const Orders: React.FC = () => {
                 </div>
             </div>
 
-            <div className="mt-3">
-                <div className="flex gap-2 items-center">
-                    <button onClick={() => setSelectedStatus('all')} className={`px-3 py-1 rounded border ${selectedStatus === 'all' ? 'bg-gray-300 text-gray-900' : 'bg-white text-gray-800'}`}>Tất cả</button>
-                    <button onClick={() => setSelectedStatus('da_thanh_toan')} className={`px-3 py-1 rounded border ${selectedStatus === 'da_thanh_toan' ? 'bg-gray-300 text-gray-900' : 'bg-white text-gray-800'}`}>Đã thanh toán</button>
-                    <button onClick={() => setSelectedStatus('dang_giao')} className={`px-3 py-1 rounded border ${selectedStatus === 'dang_giao' ? 'bg-gray-300 text-gray-900' : 'bg-white text-gray-800'}`}>Đang giao</button>
-                    <button onClick={() => setSelectedStatus('hoan_tat')} className={`px-3 py-1 rounded border ${selectedStatus === 'hoan_tat' ? 'bg-gray-300 text-gray-900' : 'bg-white text-gray-800'}`}>Hoàn thành</button>
-                    <button onClick={() => setSelectedStatus('huy')} className={`px-3 py-1 rounded border ${selectedStatus === 'huy' ? 'bg-gray-300 text-gray-900' : 'bg-white text-gray-800'}`}>Đã hủy</button>
-                    <button onClick={() => setSelectedStatus('cho_xu_ly')} className={`px-3 py-1 rounded border ${selectedStatus === 'cho_xu_ly' ? 'bg-gray-300 text-gray-900' : 'bg-white text-gray-800'}`}>Chờ xử lý</button>
-                </div>
-            </div>
+                    <div className="mt-3">
+                        <div className="relative inline-block">
+                            <button onClick={() => setFilterOpen(v => !v)} className="px-4 py-2 rounded border bg-white text-gray-800">
+                                {statusLabels[selectedStatus] || 'Bộ lọc'}
+                            </button>
+                            {filterOpen && (
+                                <div className="absolute mt-2 bg-white border border-border rounded shadow-md z-50">
+                                    {['all', 'da_thanh_toan', 'dang_giao', 'hoan_tat', 'huy', 'cho_xu_ly'].map((s:any) => (
+                                        <button key={s} onClick={() => { setSelectedStatus(s as any); setFilterOpen(false); }} className={`block w-full text-left px-4 py-2 hover:bg-muted/50 ${selectedStatus === s ? 'bg-muted/50 font-semibold' : ''}`}>
+                                            {statusLabels[s] || s}
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                        <div className="inline-block ml-3 align-middle">
+                            <input type="date" value={selectedDate ?? ''} onChange={(e) => setSelectedDate(e.target.value || null)} className="border border-input rounded px-3 py-2" />
+                            {selectedDate && <button onClick={() => setSelectedDate(null)} className="ml-2 px-2 py-1 text-sm border rounded">Xóa</button>}
+                        </div>
+                    </div>
 
             {loading ? (
                 <p className="text-center text-muted-foreground py-8">Đang tải...</p>
@@ -291,7 +322,7 @@ const Orders: React.FC = () => {
                                     <tr key={o.ma_don_hang} className="hover:bg-muted/50 transition-colors">
                                         <td className="p-4 text-foreground">{o.ma_don_hang}</td>
                                         <td className="p-4 text-foreground">{o.ten_khach_hang || ('#' + (o.ma_khach_hang ?? '-'))}</td>
-                                        <td className="p-4 text-foreground">{o.thoi_gian_giao || '-'}</td>
+                                        <td className="p-4 text-foreground">{o.thoi_gian_giao || ''}</td>
                                         <td className="p-4 text-foreground">{o.so_dien_thoai_nhan || '-'}</td>
                                         <td className="p-4 text-foreground">{o.thoi_gian_mua}</td>
                                         <td className="p-4 text-foreground">{Number(o.tong_tien || 0).toLocaleString('vi-VN')}₫</td>
@@ -420,7 +451,7 @@ const Orders: React.FC = () => {
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
                     <div className="bg-card text-card-foreground rounded-lg p-6 max-w-2xl w-full shadow-xl max-h-screen overflow-y-auto border border-border">
                         <h3 className="text-2xl font-bold mb-4">Chi tiết đơn hàng #{detail.ma_don_hang}</h3>
-                        <div className="grid grid-cols-2 gap-4 mb-4">
+                                <div className="grid grid-cols-2 gap-4 mb-4">
                             <div>
                                 <p className="text-sm text-muted-foreground">Khách hàng</p>
                                 <p className="font-semibold text-foreground">{detail.ten_khach_hang}</p>
@@ -435,7 +466,7 @@ const Orders: React.FC = () => {
                             </div>
                             <div>
                                 <p className="text-sm text-muted-foreground">Thời gian giao</p>
-                                <p className="font-semibold text-foreground">{detail.thoi_gian_giao || '-'}</p>
+                                <p className="font-semibold text-foreground">{detail.thoi_gian_giao || ''}</p>
                             </div>
                             <div>
                                 <p className="text-sm text-muted-foreground">Ngày mua</p>
@@ -468,9 +499,55 @@ const Orders: React.FC = () => {
                                                 <button onClick={handleUpdateStatus} disabled={detail?.trang_thai === 'huy' || detail?.trang_thai === 'hoan_tat'} className="bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded transition text-sm disabled:opacity-50">Lưu</button>
                                     </div>
                                             {(newStatus === 'dang_giao') && (
-                                                <div className="mt-3">
-                                                    <label className="text-sm font-medium text-muted-foreground">Tiền ship (VNĐ)</label>
-                                                    <input type="number" min={0} value={shipFee ?? 0} onChange={(e) => setShipFee(Number(e.target.value))} className="w-48 border border-input rounded px-3 py-2 mt-1 text-foreground" />
+                                                <div className="mt-3 space-y-3">
+                                                    <div>
+                                                        <label className="text-sm font-medium text-muted-foreground">Nguyên liệu đóng gói</label>
+                                                        <div className="flex items-center gap-2 mt-1">
+                                                            <select value={selectedPackagingId ?? ''} onChange={(e) => setSelectedPackagingId(e.target.value ? Number(e.target.value) : null)} className="border border-input rounded px-3 py-2">
+                                                                <option value="">-- Chọn nguyên liệu đóng gói --</option>
+                                                                {packagingOptions.map(p => (
+                                                                    <option key={p.ma_nguyen_lieu} value={p.ma_nguyen_lieu}>{p.ten_nguyen_lieu}</option>
+                                                                ))}
+                                                            </select>
+                                                            <input type="number" min={1} value={packQty} onChange={(e) => setPackQty(Number(e.target.value))} className="w-24 border border-input rounded px-3 py-2" />
+                                                            <button onClick={() => {
+                                                                if (!selectedPackagingId) return alert('Vui lòng chọn nguyên liệu đóng gói');
+                                                                const p = packagingOptions.find(x => x.ma_nguyen_lieu === selectedPackagingId);
+                                                                if (!p) return;
+                                                                const perUnit = (Number(p.gia_nhap || 0) && Number(p.so_luong_ton || 0) > 0) ? (Number(p.gia_nhap || 0) / Number(p.so_luong_ton || 1)) : Number(p.gia_nhap || 0);
+                                                                const existing = packagedItems.find(it => it.ma_nguyen_lieu === selectedPackagingId);
+                                                                if (existing) {
+                                                                    setPackagedItems(packagedItems.map(it => it.ma_nguyen_lieu === existing.ma_nguyen_lieu ? { ...it, so_luong: it.so_luong + packQty } : it));
+                                                                } else {
+                                                                    setPackagedItems([...packagedItems, { ma_nguyen_lieu: p.ma_nguyen_lieu, ten_nguyen_lieu: p.ten_nguyen_lieu, so_luong: packQty, don_gia: perUnit }]);
+                                                                }
+                                                            }} className="px-3 py-2 bg-blue-600 text-white rounded">Thêm</button>
+                                                        </div>
+                                                        {packagedItems.length > 0 && (
+                                                            <div className="mt-2">
+                                                                <table className="w-full text-sm">
+                                                                    <thead>
+                                                                        <tr className="text-muted-foreground"><th className="p-2 text-left">Nguyên liệu</th><th className="p-2 text-left">Số lượng</th><th className="p-2 text-left">Đơn giá</th><th className="p-2 text-left">Thành tiền</th><th className="p-2 text-left">X</th></tr>
+                                                                    </thead>
+                                                                    <tbody>
+                                                                        {packagedItems.map((it, idx) => (
+                                                                            <tr key={idx} className="border-t">
+                                                                                <td className="p-2">{it.ten_nguyen_lieu}</td>
+                                                                                <td className="p-2">{it.so_luong}</td>
+                                                                                <td className="p-2">{Number(it.don_gia || 0).toLocaleString('vi-VN')}₫</td>
+                                                                                <td className="p-2">{Number((it.so_luong || 0) * (it.don_gia || 0)).toLocaleString('vi-VN')}₫</td>
+                                                                                <td className="p-2"><button onClick={() => setPackagedItems(packagedItems.filter((_, i) => i !== idx))} className="px-2 py-1 rounded border">Xóa</button></td>
+                                                                            </tr>
+                                                                        ))}
+                                                                    </tbody>
+                                                                </table>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                    <div>
+                                                        <label className="text-sm font-medium text-muted-foreground">Tiền ship (VNĐ)</label>
+                                                        <input type="number" min={0} value={shipFee ?? 0} onChange={(e) => setShipFee(Number(e.target.value))} className="w-48 border border-input rounded px-3 py-2 mt-1 text-foreground" />
+                                                    </div>
                                                 </div>
                                             )}
                             </div>
@@ -500,7 +577,9 @@ const Orders: React.FC = () => {
                         </div>
                         <div className="text-right pt-4 border-t border-border">
                             <p className="font-medium text-foreground">Tiền ship: {Number(detail.tien_ship || 0).toLocaleString('vi-VN')}₫</p>
+                            <p className="font-medium text-foreground">Tổng đóng gói: {Number(detail.packaged_total || 0).toLocaleString('vi-VN')}₫</p>
                             <p className="font-bold text-foreground">Tổng hàng: {Number(detail.tong_tien || 0).toLocaleString('vi-VN')}₫</p>
+                            <p className="font-bold text-foreground">Tổng tất cả: {Number((detail.tong_tien || 0) + (detail.packaged_total || 0) + (detail.tien_ship || 0)).toLocaleString('vi-VN')}₫</p>
                             <div className="flex justify-end items-center gap-2">
                                 <button onClick={() => setDetail(null)} className="bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded mt-2 transition">Đóng</button>
                             </div>

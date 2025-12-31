@@ -6,7 +6,7 @@ export const getIngredients = async (req, res) => {
       `SELECT nl.*, d.ten as don_vi
        FROM nguyenlieu nl
        LEFT JOIN donvi d ON nl.don_vi_id = d.id
-       ORDER BY nl.ten_nguyen_lieu`
+       ORDER BY nl.ma_nguyen_lieu`
     );
     res.json(rows);
   } catch (err) {
@@ -20,7 +20,7 @@ export const getIngredients = async (req, res) => {
 export const getIngredientsWarehouse = async (req, res) => {
   try {
     const [rows] = await db.query(
-      `SELECT nl.ma_nguyen_lieu, nl.ten_nguyen_lieu, nl.don_vi_id, d.ten as don_vi, nl.gia_nhap,
+      `SELECT nl.ma_nguyen_lieu, nl.ten_nguyen_lieu, nl.loai_nguyen_lieu, nl.don_vi_id, d.ten as don_vi, nl.gia_nhap,
               COALESCE(SUM(n.so_luong_nhap * COALESCE(din.he_so_quy_doi,1) / NULLIF(COALESCE(d.he_so_quy_doi,1),0)),0) AS warehouse_qty,
               COALESCE(SUM(n.so_luong_nhap * n.don_gia),0) AS warehouse_value
        FROM nguyenlieu nl
@@ -28,7 +28,7 @@ export const getIngredientsWarehouse = async (req, res) => {
        LEFT JOIN nhapkho_nguyenlieu n ON n.ma_nguyen_lieu = nl.ma_nguyen_lieu
        LEFT JOIN donvi din ON n.don_vi_id = din.id
        GROUP BY nl.ma_nguyen_lieu, nl.ten_nguyen_lieu, nl.don_vi_id, d.ten, nl.gia_nhap
-       ORDER BY nl.ten_nguyen_lieu`
+       ORDER BY nl.ma_nguyen_lieu`
     );
     res.json(rows);
   } catch (err) {
@@ -39,11 +39,12 @@ export const getIngredientsWarehouse = async (req, res) => {
 
 export const addIngredient = async (req, res) => {
   try {
-    const { ten_nguyen_lieu, so_luong_ton, don_vi_id, gia_nhap } = req.body;
+    const { ten_nguyen_lieu, so_luong_ton, don_vi_id, gia_nhap, loai_nguyen_lieu } = req.body;
     if (!ten_nguyen_lieu || don_vi_id == null) return res.status(400).json({ message: "Thiếu thông tin nguyên liệu" });
+    const type = loai_nguyen_lieu === 'dong_goi' ? 'dong_goi' : 'che_bien';
     const [result] = await db.query(
-      "INSERT INTO nguyenlieu (ten_nguyen_lieu, so_luong_ton, don_vi_id, gia_nhap) VALUES (?, ?, ?, ?)",
-      [ten_nguyen_lieu, so_luong_ton || 0, don_vi_id, gia_nhap || 0]
+      "INSERT INTO nguyenlieu (ten_nguyen_lieu, loai_nguyen_lieu, so_luong_ton, don_vi_id, gia_nhap) VALUES (?, ?, ?, ?, ?)",
+      [ten_nguyen_lieu, type, so_luong_ton || 0, don_vi_id, gia_nhap || 0]
     );
     res.status(201).json({ message: "Thêm nguyên liệu thành công", id: result.insertId });
   } catch (err) {
@@ -76,10 +77,11 @@ export const getIngredientById = async (req, res) => {
 export const updateIngredient = async (req, res) => {
   try {
     const { id } = req.params;
-    const { ten_nguyen_lieu, so_luong_ton, don_vi_id, gia_nhap } = req.body;
+    const { ten_nguyen_lieu, so_luong_ton, don_vi_id, gia_nhap, loai_nguyen_lieu } = req.body;
+    const type = loai_nguyen_lieu === 'dong_goi' ? 'dong_goi' : 'che_bien';
     const [result] = await db.query(
-      "UPDATE nguyenlieu SET ten_nguyen_lieu = ?, so_luong_ton = ?, don_vi_id = ?, gia_nhap = ? WHERE ma_nguyen_lieu = ?",
-      [ten_nguyen_lieu, so_luong_ton || 0, don_vi_id, gia_nhap || 0, id]
+      "UPDATE nguyenlieu SET ten_nguyen_lieu = ?, loai_nguyen_lieu = ?, so_luong_ton = ?, don_vi_id = ?, gia_nhap = ? WHERE ma_nguyen_lieu = ?",
+      [ten_nguyen_lieu, type, so_luong_ton || 0, don_vi_id, gia_nhap || 0, id]
     );
     if (result.affectedRows === 0) return res.status(404).json({ message: 'Nguyên liệu không tồn tại' });
     res.json({ message: 'Cập nhật nguyên liệu thành công' });

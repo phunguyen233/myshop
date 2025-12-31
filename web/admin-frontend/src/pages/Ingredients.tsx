@@ -7,7 +7,7 @@ import { receiptAPI } from "../api/receiptAPI";
 const Ingredients: React.FC = () => {
   const [items, setItems] = useState<any[]>([]);
   const [units, setUnits] = useState<any[]>([]);
-  const [form, setForm] = useState({ ten_nguyen_lieu: "", so_luong_ton: 0, don_vi_id: 0, gia_nhap: 0 });
+  const [form, setForm] = useState({ ten_nguyen_lieu: "", so_luong_ton: 0, don_vi_id: 0, gia_nhap: 0, loai_nguyen_lieu: 'che_bien' });
   const [editingId, setEditingId] = useState<number | null>(null);
   const [receipt, setReceipt] = useState({ ma_nguyen_lieu: 0, so_luong_nhap: 0, don_vi_id: 0, don_gia: 0 });
   const [addLoading, setAddLoading] = useState(false);
@@ -27,6 +27,7 @@ const Ingredients: React.FC = () => {
   const [selectedReceiptIngredientName, setSelectedReceiptIngredientName] = useState<string>("");
   const [search, setSearch] = useState("");
   const [viewMode, setViewMode] = useState<'ingredients' | 'warehouse'>('warehouse');
+  const [selectedType, setSelectedType] = useState<'all' | 'che_bien' | 'dong_goi'>('all');
   const refreshMergedData = async () => {
     try {
       const [u, ingr, wh] = await Promise.all([unitAPI.getAll(), ingredientAPI.getAll(), ingredientAPI.getWarehouse()]);
@@ -34,7 +35,7 @@ const Ingredients: React.FC = () => {
       // merge warehouse info into ingredient items for easy rendering
       const whMap: Record<string, any> = {};
       (wh || []).forEach((w: any) => { whMap[w.ma_nguyen_lieu] = w; });
-      const merged = (ingr || []).map((it: any) => ({ ...it, __warehouse: whMap[it.ma_nguyen_lieu] || { warehouse_qty: 0, warehouse_value: 0 } }));
+      const merged = (ingr || []).map((it: any) => ({ ...it, __warehouse: whMap[it.ma_nguyen_lieu] || { warehouse_qty: 0, warehouse_value: 0 } })).sort((a: any, b: any) => Number(a.ma_nguyen_lieu) - Number(b.ma_nguyen_lieu));
       setItems(merged);
     } catch (err) {
       console.error(err);
@@ -88,9 +89,9 @@ const Ingredients: React.FC = () => {
       const list = await ingredientAPI.getAll();
       const whMap: Record<string, any> = {};
       (wh || []).forEach((w: any) => { whMap[w.ma_nguyen_lieu] = w; });
-      const merged = (list || []).map((it: any) => ({ ...it, __warehouse: whMap[it.ma_nguyen_lieu] || { warehouse_qty: 0, warehouse_value: 0 } }));
+      const merged = (list || []).map((it: any) => ({ ...it, __warehouse: whMap[it.ma_nguyen_lieu] || { warehouse_qty: 0, warehouse_value: 0 } })).sort((a: any, b: any) => Number(a.ma_nguyen_lieu) - Number(b.ma_nguyen_lieu));
       setItems(merged);
-      setForm({ ten_nguyen_lieu: "", so_luong_ton: 0, don_vi_id: 0, gia_nhap: 0 });
+      setForm({ ten_nguyen_lieu: "", so_luong_ton: 0, don_vi_id: 0, gia_nhap: 0, loai_nguyen_lieu: 'che_bien' });
       setEditingId(null);
       setTimeout(() => setSuccessMsg(""), 3000);
     } catch (err: any) {
@@ -104,7 +105,7 @@ const Ingredients: React.FC = () => {
   const handleEdit = (item: any, fromWarehouse: boolean = false) => {
     setEditingId(item.ma_nguyen_lieu);
     setEditFromWarehouse(!!fromWarehouse);
-    setForm({ ten_nguyen_lieu: item.ten_nguyen_lieu, so_luong_ton: item.so_luong_ton || 0, don_vi_id: item.don_vi_id || 0, gia_nhap: item.gia_nhap || 0 });
+    setForm({ ten_nguyen_lieu: item.ten_nguyen_lieu, so_luong_ton: item.so_luong_ton || 0, don_vi_id: item.don_vi_id || 0, gia_nhap: item.gia_nhap || 0, loai_nguyen_lieu: item.loai_nguyen_lieu || 'che_bien' });
     if (fromWarehouse) {
       const whQty = (item.__warehouse && Number(item.__warehouse.warehouse_qty)) || 0;
       setWarehouseEditQty(whQty);
@@ -126,7 +127,7 @@ const Ingredients: React.FC = () => {
       const list = await ingredientAPI.getAll();
       const whMap: Record<string, any> = {};
       (wh || []).forEach((w: any) => { whMap[w.ma_nguyen_lieu] = w; });
-      const merged = (list || []).map((it: any) => ({ ...it, __warehouse: whMap[it.ma_nguyen_lieu] || { warehouse_qty: 0, warehouse_value: 0 } }));
+      const merged = (list || []).map((it: any) => ({ ...it, __warehouse: whMap[it.ma_nguyen_lieu] || { warehouse_qty: 0, warehouse_value: 0 } })).sort((a: any, b: any) => Number(a.ma_nguyen_lieu) - Number(b.ma_nguyen_lieu));
       setItems(merged);
       alert('Xóa nguyên liệu thành công');
     } catch (e: any) {
@@ -184,7 +185,7 @@ const Ingredients: React.FC = () => {
   };
 
   const openAddModal = () => {
-    setForm({ ten_nguyen_lieu: "", so_luong_ton: 0, don_vi_id: 0, gia_nhap: 0 });
+    setForm({ ten_nguyen_lieu: "", so_luong_ton: 0, don_vi_id: 0, gia_nhap: 0, loai_nguyen_lieu: 'che_bien' });
     setEditingId(null);
     setShowAddModal(true);
   };
@@ -281,6 +282,13 @@ const Ingredients: React.FC = () => {
         {viewMode === 'ingredients' ? (
           <>
             <h2 className="text-xl font-semibold mb-4">Danh sách nguyên liệu</h2>
+            <div className="flex justify-center mb-4">
+              <div className="inline-flex rounded-md shadow-sm" role="tablist">
+                <button onClick={() => setSelectedType('che_bien')} className={`px-4 py-2 border ${selectedType === 'che_bien' ? 'bg-indigo-600 text-white' : 'bg-white text-gray-800'}`}>Chế biến</button>
+                <button onClick={() => setSelectedType('dong_goi')} className={`px-4 py-2 border ${selectedType === 'dong_goi' ? 'bg-indigo-600 text-white' : 'bg-white text-gray-800'}`}>Đóng gói</button>
+                <button onClick={() => setSelectedType('all')} className={`px-4 py-2 border ${selectedType === 'all' ? 'bg-gray-200 text-gray-900' : 'bg-white text-gray-800'}`}>Tất cả</button>
+              </div>
+            </div>
             <div className="overflow-x-auto rounded-lg border border-border">
               <table className="w-full text-left text-sm">
                 <thead className="bg-muted/50 text-muted-foreground">
@@ -294,14 +302,14 @@ const Ingredients: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
-                  {items.filter(i => !search || i.ten_nguyen_lieu.toLowerCase().includes(search.toLowerCase())).length === 0 ? (
+                  {items.filter(i => (selectedType === 'all' || i.loai_nguyen_lieu === selectedType) && (!search || i.ten_nguyen_lieu.toLowerCase().includes(search.toLowerCase()))).length === 0 ? (
                     <tr>
                       <td colSpan={6} className="p-4 text-center text-muted-foreground">
                         Chưa có nguyên liệu nào
                       </td>
                     </tr>
                     ) : (
-                    items.filter(i => !search || i.ten_nguyen_lieu.toLowerCase().includes(search.toLowerCase())).map(i => (
+                    items.filter(i => (selectedType === 'all' || i.loai_nguyen_lieu === selectedType) && (!search || i.ten_nguyen_lieu.toLowerCase().includes(search.toLowerCase()))).map(i => (
                       <tr key={i.ma_nguyen_lieu} className="hover:bg-muted/50 transition-colors">
                         <td className="p-3 text-foreground">{i.ma_nguyen_lieu}</td>
                         <td className="p-3 text-foreground font-medium">{i.ten_nguyen_lieu}</td>
@@ -337,14 +345,14 @@ const Ingredients: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
-                  {items.filter(i => !search || i.ten_nguyen_lieu.toLowerCase().includes(search.toLowerCase())).length === 0 ? (
+                  {items.filter(i => (selectedType === 'all' || i.loai_nguyen_lieu === selectedType) && (!search || i.ten_nguyen_lieu.toLowerCase().includes(search.toLowerCase()))).length === 0 ? (
                     <tr>
                       <td colSpan={6} className="p-4 text-center text-muted-foreground">Chưa có dữ liệu kho</td>
                     </tr>
                   ) : (
                     // Kho view: lấy dữ liệu tổng nhập kho từ endpoint mới
                     // `ingredientAPI.getWarehouse()` trả về hàng với fields: ma_nguyen_lieu, ten_nguyen_lieu, don_vi_id, don_vi, gia_nhap, warehouse_qty, warehouse_value
-                    items.filter(i => !search || i.ten_nguyen_lieu.toLowerCase().includes(search.toLowerCase())).map(i => {
+                    items.filter(i => (selectedType === 'all' || i.loai_nguyen_lieu === selectedType) && (!search || i.ten_nguyen_lieu.toLowerCase().includes(search.toLowerCase()))).map(i => {
                       const wh = i.__warehouse || { warehouse_qty: 0, warehouse_value: 0 };
                       const storedUnit = units.find(u => u.id === i.don_vi_id) || { he_so_quy_doi: 1, ten: '' };
                       const qty = Number(wh.warehouse_qty) || 0;
@@ -388,6 +396,10 @@ const Ingredients: React.FC = () => {
           <div className="absolute inset-0 bg-black/40" onClick={() => setShowAddModal(false)} />
           <div className="bg-white rounded shadow-lg p-6 z-10 w-full max-w-md">
             <h3 className="text-lg font-semibold mb-4">Thêm nguyên liệu</h3>
+            <div className="flex justify-center gap-2 mb-3">
+              <button onClick={() => setForm({ ...form, loai_nguyen_lieu: 'che_bien' })} className={`px-3 py-1 rounded border ${form.loai_nguyen_lieu === 'che_bien' ? 'bg-indigo-600 text-white' : 'bg-white text-gray-800'}`}>Chế biến</button>
+              <button onClick={() => setForm({ ...form, loai_nguyen_lieu: 'dong_goi' })} className={`px-3 py-1 rounded border ${form.loai_nguyen_lieu === 'dong_goi' ? 'bg-indigo-600 text-white' : 'bg-white text-gray-800'}`}>Đóng gói</button>
+            </div>
             {addError && <div className="bg-red-100 border border-red-400 text-red-700 px-3 py-2 rounded mb-3 text-sm">{addError}</div>}
             <div className="space-y-3">
               <div>
@@ -469,6 +481,13 @@ const Ingredients: React.FC = () => {
                 <div>
                   <label className="block text-sm font-medium mb-1">Giá tổng (VNĐ) — cho số lượng hiện tại</label>
                   <input type="number" min={0} step="0.01" value={form.gia_nhap} onChange={e => setForm({ ...form, gia_nhap: Number(e.target.value) })} className="w-full border border-input rounded px-3 py-2 text-sm" />
+                </div>
+              )}
+              {!editFromWarehouse && (
+                <div className="mt-2 flex items-center gap-2">
+                  <label className="text-sm font-medium mr-2">Loại</label>
+                  <button onClick={() => setForm({ ...form, loai_nguyen_lieu: 'che_bien' })} className={`px-3 py-1 rounded border ${form.loai_nguyen_lieu === 'che_bien' ? 'bg-indigo-600 text-white' : 'bg-white text-gray-800'}`}>Chế biến</button>
+                  <button onClick={() => setForm({ ...form, loai_nguyen_lieu: 'dong_goi' })} className={`px-3 py-1 rounded border ${form.loai_nguyen_lieu === 'dong_goi' ? 'bg-indigo-600 text-white' : 'bg-white text-gray-800'}`}>Đóng gói</button>
                 </div>
               )}
               <div className="flex gap-2 justify-end">

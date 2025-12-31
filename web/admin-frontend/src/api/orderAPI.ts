@@ -24,6 +24,8 @@ export interface Order {
   dia_chi_nhan?: string;
   tien_ship?: number;
   profit?: number;
+  packagedItems?: Array<{ ma_nguyen_lieu: number; ten_nguyen_lieu?: string; so_luong: number; don_gia: number }>;
+  packaged_total?: number;
 }
 
 const endpoint = "/orders";
@@ -45,10 +47,11 @@ export const orderAPI = {
     const res = await axiosClient.get(`${endpoint}/search`, { params: { q } });
     return res.data;
   },
-  updateStatus: async (id: number, trang_thai: string, tien_ship?: number) => {
+  updateStatus: async (id: number, trang_thai: string, tien_ship?: number, packagedItems?: any[]) => {
     const url = `${endpoint}/${id}/status`;
     const payload: any = { trang_thai };
     if (typeof tien_ship === 'number') payload.tien_ship = tien_ship;
+    if (Array.isArray(packagedItems) && packagedItems.length > 0) payload.packaged_items = packagedItems;
     console.debug('orderAPI.updateStatus ->', url, payload);
     const res = await axiosClient.put(url, payload);
     return res.data;

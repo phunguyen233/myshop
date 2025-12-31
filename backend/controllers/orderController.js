@@ -103,8 +103,8 @@ export const addOrder = async (req, res) => {
 
     // Chèn bản ghi vào `donhang` kèm thông tin người nhận
     // Đặt `trang_thai` mặc định là 'cho_xu_ly' để chắc chắn tạo đơn không gây trừ nguyên liệu
-    // thoi_gian_giao is required by the schema; if not provided, default to NOW()
-    const final_thoi_gian_giao = thoi_gian_giao || new Date();
+    // Nếu không cung cấp `thoi_gian_giao`, lưu NULL để cột hiển thị trống
+    const final_thoi_gian_giao = typeof thoi_gian_giao !== 'undefined' && thoi_gian_giao !== null ? thoi_gian_giao : null;
     const final_tien_ship = typeof tien_ship !== 'undefined' && tien_ship !== null ? tien_ship : 0;
 
     const [order] = await db.query(
