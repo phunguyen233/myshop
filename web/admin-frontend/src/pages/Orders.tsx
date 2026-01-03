@@ -16,6 +16,8 @@ const Orders: React.FC = () => {
     const [shipFee, setShipFee] = useState<number | null>(null);
     const [packagingOptions, setPackagingOptions] = useState<any[]>([]);
     const [packagedItems, setPackagedItems] = useState<Array<{ ma_nguyen_lieu: number; ten_nguyen_lieu?: string; so_luong: number; don_gia: number }>>([]);
+    const [voucherType, setVoucherType] = useState<'amount' | 'percent'>('amount');
+    const [voucherValue, setVoucherValue] = useState<number>(0);
     const [selectedPackagingId, setSelectedPackagingId] = useState<number | null>(null);
     const [packQty, setPackQty] = useState<number>(1);
     const [showAddModal, setShowAddModal] = useState(false);
@@ -149,6 +151,8 @@ const Orders: React.FC = () => {
             setDetail(data);
             setNewStatus(data.trang_thai || "cho_xu_ly");
             setShipFee(typeof data.tien_ship !== 'undefined' && data.tien_ship !== null ? Number(data.tien_ship) : 0);
+            setVoucherValue(typeof data.so_tien_giam === 'number' ? Number(data.so_tien_giam) : 0);
+            setVoucherType('amount');
             // load packaging options (ingredients of type 'dong_goi')
             try {
                 const ingr = await ingredientAPI.getAll();
@@ -222,7 +226,7 @@ const Orders: React.FC = () => {
                 return;
             }
 
-            const resp: any = await orderAPI.updateStatus(detail.ma_don_hang, newStatus, shipFee ?? undefined, packagedItems.length ? packagedItems : undefined);
+            const resp: any = await orderAPI.updateStatus(detail.ma_don_hang, newStatus, shipFee ?? undefined, packagedItems.length ? packagedItems : undefined, voucherType, voucherValue);
             alert(resp?.message || 'Cập nhật trạng thái thành công');
             // refresh list and detail
             fetchOrders();
@@ -570,6 +574,16 @@ const Orders: React.FC = () => {
                                                         <label className="text-sm font-medium text-muted-foreground">Tiền ship (VNĐ)</label>
                                                         <input type="number" min={0} value={shipFee ?? 0} onChange={(e) => setShipFee(Number(e.target.value))} className="w-48 border border-input rounded px-3 py-2 mt-1 text-foreground" />
                                                     </div>
+                                                    <div>
+                                                        <label className="text-sm font-medium text-muted-foreground">Voucher giảm giá</label>
+                                                        <div className="flex items-center gap-2 mt-1">
+                                                            <select value={voucherType} onChange={(e) => setVoucherType(e.target.value as any)} className="border border-input rounded px-2 py-1">
+                                                                <option value="amount">Số tiền (VNĐ)</option>
+                                                                <option value="percent">Phần trăm (%)</option>
+                                                            </select>
+                                                            <input type="number" min={0} value={voucherValue} onChange={(e) => setVoucherValue(Number(e.target.value))} className="w-40 border border-input rounded px-2 py-1" />
+                                                        </div>
+                                                    </div>
                                                 </div>
                                             )}
                             </div>
@@ -598,9 +612,10 @@ const Orders: React.FC = () => {
                             </table>
                         </div>
                         <div className="text-right pt-4 border-t border-border">
-                            <p className="font-medium text-foreground">Tiền ship: {Number(detail.tien_ship || detail.tien_ship === 0 ? detail.tien_ship : 0).toLocaleString('vi-VN')}₫</p>
+                            <p className="font-medium text-foreground">Tiền ship: {Number(detail.tien_ship ?? 0).toLocaleString('vi-VN')}₫</p>
                             <p className="font-medium text-foreground">Tổng đóng gói: {Number(detail.tien_dong_goi ?? detail.packaged_total ?? 0).toLocaleString('vi-VN')}₫</p>
-                            <p className="font-bold text-foreground">Tổng hàng: {Number(detail.tong_tien || 0).toLocaleString('vi-VN')}₫</p>
+                            <p className="font-medium text-foreground">Tiền giảm: {Number(detail.so_tien_giam ?? 0).toLocaleString('vi-VN')}₫</p>
+                            <p className="font-bold text-foreground">Tổng hàng: {Number(detail.total_after_discount ?? detail.tong_tien ?? 0).toLocaleString('vi-VN')}₫</p>
                             <div className="flex justify-end items-center gap-2">
                                 <button onClick={() => setDetail(null)} className="bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded mt-2 transition">Đóng</button>
                             </div>

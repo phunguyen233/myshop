@@ -3,7 +3,7 @@ import db from "../config/db.js";
 export const getOrders = async (req, res) => {
   try {
     const [rows] = await db.query(
-      "SELECT d.ma_don_hang, d.ma_khach_hang, d.so_dien_thoai_nhan, d.dia_chi_nhan, d.tong_tien, d.trang_thai, d.tien_ship, d.tien_dong_goi, DATE_FORMAT(d.thoi_gian_mua, '%Y-%m-%d %H:%i:%s') as thoi_gian_mua, DATE_FORMAT(d.thoi_gian_giao, '%Y-%m-%d %H:%i:%s') as thoi_gian_giao, k.ho_ten as ten_khach_hang, k.so_dien_thoai as khach_so_dien_thoai FROM donhang d LEFT JOIN khachhang k ON d.ma_khach_hang = k.ma_khach_hang ORDER BY d.thoi_gian_mua DESC"
+      "SELECT d.ma_don_hang, d.ma_khach_hang, d.so_dien_thoai_nhan, d.dia_chi_nhan, d.tong_tien, d.trang_thai, d.tien_ship, d.tien_dong_goi, d.voucher_id, d.so_tien_giam, DATE_FORMAT(d.thoi_gian_mua, '%Y-%m-%d %H:%i:%s') as thoi_gian_mua, DATE_FORMAT(d.thoi_gian_giao, '%Y-%m-%d %H:%i:%s') as thoi_gian_giao, k.ho_ten as ten_khach_hang, k.so_dien_thoai as khach_so_dien_thoai FROM donhang d LEFT JOIN khachhang k ON d.ma_khach_hang = k.ma_khach_hang ORDER BY d.thoi_gian_mua DESC"
     );
 
     // compute profit for each order: product_total - ingredient_cost - tien_ship
@@ -46,8 +46,9 @@ export const getOrders = async (req, res) => {
 
       const tien_ship = Number(o.tien_ship || 0);
       const tien_dong_goi = Number(o.tien_dong_goi || 0);
-      const profit = product_total - ingredient_cost - tien_ship - tien_dong_goi;
-      enhanced.push({ ...o, product_total, ingredient_cost, profit });
+      const so_tien_giam = Number(o.so_tien_giam || 0);
+      const profit = product_total - so_tien_giam - ingredient_cost - tien_ship - tien_dong_goi;
+      enhanced.push({ ...o, product_total, ingredient_cost, so_tien_giam, profit });
     }
     res.json(enhanced);
   } catch (err) {
@@ -70,6 +71,9 @@ export const addOrder = async (req, res) => {
       tien_ship,
       tong_tien,
       chi_tiet,
+      voucher_id,
+      so_tien_giam,
+      tien_dong_goi
     } = req.body;
 
     let final_ma_khach_hang = ma_khach_hang || null;
@@ -107,10 +111,13 @@ export const addOrder = async (req, res) => {
     // Nếu không cung cấp `thoi_gian_giao`, lưu NULL để cột hiển thị trống
     const final_thoi_gian_giao = typeof thoi_gian_giao !== 'undefined' && thoi_gian_giao !== null ? thoi_gian_giao : null;
     const final_tien_ship = typeof tien_ship !== 'undefined' && tien_ship !== null ? tien_ship : 0;
+    const final_tien_dong_goi = typeof tien_dong_goi !== 'undefined' && tien_dong_goi !== null ? tien_dong_goi : 0;
+    const final_so_tien_giam = typeof so_tien_giam !== 'undefined' && so_tien_giam !== null ? so_tien_giam : 0;
+    const final_voucher_id = typeof voucher_id !== 'undefined' && voucher_id !== null ? voucher_id : null;
 
     const [order] = await db.query(
-      "INSERT INTO donhang (ma_khach_hang, so_dien_thoai_nhan, dia_chi_nhan, thoi_gian_giao, tong_tien, trang_thai, tien_ship) VALUES (?, ?, ?, ?, ?, ?, ?)",
-      [final_ma_khach_hang, so_dien_thoai_nhan || null, dia_chi_nhan || null, final_thoi_gian_giao, tong_tien, 'cho_xu_ly', final_tien_ship]
+      "INSERT INTO donhang (ma_khach_hang, so_dien_thoai_nhan, dia_chi_nhan, thoi_gian_giao, tong_tien, trang_thai, tien_ship, tien_dong_goi, voucher_id, so_tien_giam) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+      [final_ma_khach_hang, so_dien_thoai_nhan || null, dia_chi_nhan || null, final_thoi_gian_giao, tong_tien, 'cho_xu_ly', final_tien_ship, final_tien_dong_goi, final_voucher_id, final_so_tien_giam]
     );
     const ma_don_hang = order.insertId;
 
@@ -202,7 +209,7 @@ export const getOrderById = async (req, res) => {
   try {
     const { id } = req.params;
     const [[order]] = await db.query(
-      "SELECT d.ma_don_hang, d.ma_khach_hang, d.so_dien_thoai_nhan, d.dia_chi_nhan, d.tong_tien, d.trang_thai, d.tien_ship, d.tien_dong_goi, DATE_FORMAT(d.thoi_gian_mua, '%Y-%m-%d %H:%i:%s') as thoi_gian_mua, DATE_FORMAT(d.thoi_gian_giao, '%Y-%m-%d %H:%i:%s') as thoi_gian_giao, k.ho_ten as ten_khach_hang, k.so_dien_thoai as khach_so_dien_thoai FROM donhang d LEFT JOIN khachhang k ON d.ma_khach_hang = k.ma_khach_hang WHERE d.ma_don_hang = ?",
+      "SELECT d.ma_don_hang, d.ma_khach_hang, d.so_dien_thoai_nhan, d.dia_chi_nhan, d.tong_tien, d.trang_thai, d.tien_ship, d.tien_dong_goi, d.voucher_id, d.so_tien_giam, DATE_FORMAT(d.thoi_gian_mua, '%Y-%m-%d %H:%i:%s') as thoi_gian_mua, DATE_FORMAT(d.thoi_gian_giao, '%Y-%m-%d %H:%i:%s') as thoi_gian_giao, k.ho_ten as ten_khach_hang, k.so_dien_thoai as khach_so_dien_thoai FROM donhang d LEFT JOIN khachhang k ON d.ma_khach_hang = k.ma_khach_hang WHERE d.ma_don_hang = ?",
       [id]
     );
 
@@ -213,7 +220,13 @@ export const getOrderById = async (req, res) => {
       [id]
     );
 
-    res.json({ ...order, items });
+    // compute product_total and total after voucher discount
+    const [[pt2]] = await db.query("SELECT IFNULL(SUM(so_luong * don_gia),0) AS product_total FROM chitiet_donhang WHERE ma_don_hang = ?", [id]);
+    const product_total = Number((pt2 && pt2.product_total) || 0);
+    const so_tien_giam = Number(order.so_tien_giam || 0);
+    const total_after_discount = product_total - so_tien_giam;
+
+    res.json({ ...order, items, product_total, total_after_discount, so_tien_giam });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Lỗi khi lấy chi tiết đơn hàng" });
@@ -226,11 +239,15 @@ export const searchOrders = async (req, res) => {
     if (!q) return res.json([]);
     const search = `%${q}%`;
     const [rows] = await db.query(
-      `SELECT d.ma_don_hang, d.ma_khach_hang, d.so_dien_thoai_nhan, d.dia_chi_nhan, d.tong_tien, d.trang_thai, d.tien_ship, d.tien_dong_goi, DATE_FORMAT(d.thoi_gian_mua, '%Y-%m-%d %H:%i:%s') as thoi_gian_mua, DATE_FORMAT(d.thoi_gian_giao, '%Y-%m-%d %H:%i:%s') as thoi_gian_giao FROM donhang d LEFT JOIN khachhang k ON d.ma_khach_hang = k.ma_khach_hang
        LEFT JOIN chitiet_donhang c ON c.ma_don_hang = d.ma_don_hang
        LEFT JOIN sanpham s ON s.ma_san_pham = c.ma_san_pham
        WHERE d.ma_don_hang LIKE ? OR k.ho_ten LIKE ? OR s.ten_san_pham LIKE ?
        GROUP BY d.ma_don_hang ORDER BY d.thoi_gian_mua DESC`,
+      `SELECT d.ma_don_hang, d.ma_khach_hang, d.so_dien_thoai_nhan, d.dia_chi_nhan, d.tong_tien, d.trang_thai, d.tien_ship, d.tien_dong_goi, d.voucher_id, d.so_tien_giam, DATE_FORMAT(d.thoi_gian_mua, '%Y-%m-%d %H:%i:%s') as thoi_gian_mua, DATE_FORMAT(d.thoi_gian_giao, '%Y-%m-%d %H:%i:%s') as thoi_gian_giao FROM donhang d LEFT JOIN khachhang k ON d.ma_khach_hang = k.ma_khach_hang
+        LEFT JOIN chitiet_donhang c ON c.ma_don_hang = d.ma_don_hang
+        LEFT JOIN sanpham s ON s.ma_san_pham = c.ma_san_pham
+        WHERE d.ma_don_hang LIKE ? OR k.ho_ten LIKE ? OR s.ten_san_pham LIKE ?
+        GROUP BY d.ma_don_hang ORDER BY d.thoi_gian_mua DESC`,
       [search, search, search]
     );
     res.json(rows);
@@ -243,7 +260,7 @@ export const searchOrders = async (req, res) => {
 export const updateOrderStatus = async (req, res) => {
   try {
     const { id } = req.params;
-    const { trang_thai, tien_ship, packaged_items } = req.body;
+    const { trang_thai, tien_ship, packaged_items, voucher_id, voucher_type, voucher_value, so_tien_giam: so_tien_giam_from_body } = req.body;
     if (!trang_thai) return res.status(400).json({ message: "Thiếu trạng thái" });
 
     // Kiểm tra giá trị trạng thái có hợp lệ so với enum trong schema
@@ -266,6 +283,21 @@ export const updateOrderStatus = async (req, res) => {
       const prevStatus = current.trang_thai;
       let deductions = null;
       let packaged_total_local = 0;
+
+      // compute product_total early so voucher can be calculated when switching to 'dang_giao'
+      const [[ptStart]] = await connection.query("SELECT IFNULL(SUM(so_luong * don_gia),0) AS product_total FROM chitiet_donhang WHERE ma_don_hang = ?", [id]);
+      const product_total_start = Number((ptStart && ptStart.product_total) || 0);
+      let so_tien_giam_val = 0;
+      if (trang_thai === 'dang_giao') {
+        if (typeof so_tien_giam_from_body === 'number') {
+          so_tien_giam_val = Number(so_tien_giam_from_body || 0);
+        } else if (voucher_type === 'percent' && typeof voucher_value !== 'undefined') {
+          const pct = Number(voucher_value || 0);
+          so_tien_giam_val = Math.round((product_total_start * pct / 100) * 100) / 100;
+        } else if (voucher_type === 'amount' && typeof voucher_value !== 'undefined') {
+          so_tien_giam_val = Number(voucher_value || 0);
+        }
+      }
 
       // If switching to 'dang_giao' and packaged_items provided, validate and deduct packaged materials from warehouse
       if (trang_thai === 'dang_giao' && Array.isArray(packaged_items) && packaged_items.length > 0) {
@@ -472,27 +504,31 @@ export const updateOrderStatus = async (req, res) => {
         }
       }
 
-      // Cập nhật trạng thái đơn hàng (và tiền ship nếu có)
-      // include tien_dong_goi if packaged items were provided
+      // Cập nhật trạng thái đơn hàng (và tiền ship, đóng gói, voucher nếu có)
+      const updates = [];
+      const params = [];
+      updates.push('trang_thai = ?'); params.push(trang_thai);
       if (typeof tien_ship !== 'undefined' && tien_ship !== null) {
-        if (packaged_total_local && packaged_total_local > 0) {
-          await connection.query("UPDATE donhang SET trang_thai = ?, tien_ship = ?, tien_dong_goi = ? WHERE ma_don_hang = ?", [trang_thai, tien_ship, packaged_total_local, id]);
-        } else {
-          await connection.query("UPDATE donhang SET trang_thai = ?, tien_ship = ? WHERE ma_don_hang = ?", [trang_thai, tien_ship, id]);
-        }
-      } else {
-        if (packaged_total_local && packaged_total_local > 0) {
-          await connection.query("UPDATE donhang SET trang_thai = ?, tien_dong_goi = ? WHERE ma_don_hang = ?", [trang_thai, packaged_total_local, id]);
-        } else {
-          await connection.query("UPDATE donhang SET trang_thai = ? WHERE ma_don_hang = ?", [trang_thai, id]);
-        }
+        updates.push('tien_ship = ?'); params.push(tien_ship);
       }
+      if (packaged_total_local && packaged_total_local > 0) {
+        updates.push('tien_dong_goi = ?'); params.push(packaged_total_local);
+      }
+      if (typeof so_tien_giam_val !== 'undefined' && so_tien_giam_val > 0) {
+        updates.push('so_tien_giam = ?'); params.push(so_tien_giam_val);
+      }
+      if (typeof voucher_id !== 'undefined' && voucher_id !== null) {
+        updates.push('voucher_id = ?'); params.push(voucher_id);
+      }
+      params.push(id);
+      const sql = `UPDATE donhang SET ${updates.join(', ')} WHERE ma_don_hang = ?`;
+      await connection.query(sql, params);
 
       await connection.commit();
 
       // fetch updated order
       const [[order]] = await db.query(
-        "SELECT d.ma_don_hang, d.ma_khach_hang, d.so_dien_thoai_nhan, d.dia_chi_nhan, d.tong_tien, d.trang_thai, d.tien_ship, DATE_FORMAT(d.thoi_gian_mua, '%Y-%m-%d %H:%i:%s') as thoi_gian_mua, DATE_FORMAT(d.thoi_gian_giao, '%Y-%m-%d %H:%i:%s') as thoi_gian_giao, k.ho_ten as ten_khach_hang, k.so_dien_thoai as khach_so_dien_thoai FROM donhang d LEFT JOIN khachhang k ON d.ma_khach_hang = k.ma_khach_hang WHERE d.ma_don_hang = ?",
+        "SELECT d.ma_don_hang, d.ma_khach_hang, d.so_dien_thoai_nhan, d.dia_chi_nhan, d.tong_tien, d.trang_thai, d.tien_ship, d.tien_dong_goi, d.voucher_id, d.so_tien_giam, DATE_FORMAT(d.thoi_gian_mua, '%Y-%m-%d %H:%i:%s') as thoi_gian_mua, DATE_FORMAT(d.thoi_gian_giao, '%Y-%m-%d %H:%i:%s') as thoi_gian_giao, k.ho_ten as ten_khach_hang, k.so_dien_thoai as khach_so_dien_thoai FROM donhang d LEFT JOIN khachhang k ON d.ma_khach_hang = k.ma_khach_hang WHERE d.ma_don_hang = ?",
         [id]
       );
 
@@ -541,10 +577,13 @@ export const updateOrderStatus = async (req, res) => {
       }
 
       const tien_ship_val = typeof tien_ship !== 'undefined' && tien_ship !== null ? Number(tien_ship) : Number(order.tien_ship || 0);
-      const profit = product_total - ingredient_cost - tien_ship_val - packaged_total;
+      const so_tien_giam_val_from_order = Number(order.so_tien_giam || 0);
+      const so_tien_giam_effective = so_tien_giam_val_from_order || so_tien_giam_val || 0;
+      const total_after_discount = product_total - so_tien_giam_effective;
+      const profit = product_total - so_tien_giam_effective - ingredient_cost - tien_ship_val - packaged_total;
 
-      // include deductions if any, plus packaged_total and profit
-      const baseResp = { message: "Cập nhật trạng thái thành công", order, packaged_total, profit };
+      // include deductions if any, plus packaged_total, discount and profit
+      const baseResp = { message: "Cập nhật trạng thái thành công", order, product_total, total_after_discount, so_tien_giam: so_tien_giam_effective, packaged_total, profit };
       if (typeof deductions !== 'undefined' && Array.isArray(deductions) && deductions.length > 0) {
         baseResp.deductions = deductions;
       }
