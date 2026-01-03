@@ -241,15 +241,14 @@ export const searchOrders = async (req, res) => {
     if (!q) return res.json([]);
     const search = `%${q}%`;
     const [rows] = await db.query(
+      `SELECT d.ma_don_hang, d.ma_khach_hang, d.so_dien_thoai_nhan, d.dia_chi_nhan, d.tong_tien, d.trang_thai, d.tien_ship, d.tien_dong_goi, d.voucher_id, d.so_tien_giam, d.tinh_tu_dong, DATE_FORMAT(d.thoi_gian_mua, '%Y-%m-%d %H:%i:%s') as thoi_gian_mua, DATE_FORMAT(d.thoi_gian_giao, '%Y-%m-%d %H:%i:%s') as thoi_gian_giao
+       FROM donhang d
+       LEFT JOIN khachhang k ON d.ma_khach_hang = k.ma_khach_hang
        LEFT JOIN chitiet_donhang c ON c.ma_don_hang = d.ma_don_hang
        LEFT JOIN sanpham s ON s.ma_san_pham = c.ma_san_pham
        WHERE d.ma_don_hang LIKE ? OR k.ho_ten LIKE ? OR s.ten_san_pham LIKE ?
-       GROUP BY d.ma_don_hang ORDER BY d.thoi_gian_mua DESC`,
-      `SELECT d.ma_don_hang, d.ma_khach_hang, d.so_dien_thoai_nhan, d.dia_chi_nhan, d.tong_tien, d.trang_thai, d.tien_ship, d.tien_dong_goi, d.voucher_id, d.so_tien_giam, DATE_FORMAT(d.thoi_gian_mua, '%Y-%m-%d %H:%i:%s') as thoi_gian_mua, DATE_FORMAT(d.thoi_gian_giao, '%Y-%m-%d %H:%i:%s') as thoi_gian_giao FROM donhang d LEFT JOIN khachhang k ON d.ma_khach_hang = k.ma_khach_hang
-        LEFT JOIN chitiet_donhang c ON c.ma_don_hang = d.ma_don_hang
-        LEFT JOIN sanpham s ON s.ma_san_pham = c.ma_san_pham
-        WHERE d.ma_don_hang LIKE ? OR k.ho_ten LIKE ? OR s.ten_san_pham LIKE ?
-        GROUP BY d.ma_don_hang ORDER BY d.thoi_gian_mua DESC`,
+       GROUP BY d.ma_don_hang
+       ORDER BY d.thoi_gian_mua DESC`,
       [search, search, search]
     );
     res.json(rows);
