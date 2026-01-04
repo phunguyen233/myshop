@@ -43,7 +43,7 @@ export const orderAPI = {
     const res = await axiosClient.get(`${endpoint}/${id}`);
     return res.data;
   },
-  create: async (payload: { ma_khach_hang?: number; so_dien_thoai_nhan?: string; dia_chi_nhan?: string; thoi_gian_giao?: string; tien_ship?: number; tong_tien: number; chi_tiet: OrderItem[] }) => {
+  create: async (payload: { ma_khach_hang?: number; so_dien_thoai_nhan?: string; dia_chi_nhan?: string; thoi_gian_giao?: string; tien_ship?: number; tong_tien: number; chi_tiet: OrderItem[]; so_tien_giam?: number }) => {
     const res = await axiosClient.post(endpoint, payload);
     return res.data;
   },

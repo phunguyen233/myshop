@@ -32,6 +32,8 @@ const Orders: React.FC = () => {
     const [deliveryTime, setDeliveryTime] = useState<string | null>(null);
     const [orderItems, setOrderItems] = useState<Array<{ ma_san_pham: number; ten_san_pham?: string; so_luong: number; don_gia: number }>>([]);
     const [orderFieldErrors, setOrderFieldErrors] = useState<{ customer?: string; items?: string; phone?: string; address?: string }>({});
+    const [addVoucherType, setAddVoucherType] = useState<'amount' | 'percent'>('amount');
+    const [addVoucherValue, setAddVoucherValue] = useState<number>(0);
 
     // Use enum values from your DB: 'cho_xu_ly','da_thanh_toan','dang_giao','hoan_tat','huy'
     const statuses = ["cho_xu_ly", "da_thanh_toan", "dang_giao", "hoan_tat", "huy"];
@@ -94,6 +96,8 @@ const Orders: React.FC = () => {
         setRecipientPhone("");
         setDeliveryTime(null);
         setOrderItems([]);
+        setAddVoucherType('amount');
+        setAddVoucherValue(0);
         setShowAddModal(true);
     };
 
@@ -132,7 +136,16 @@ const Orders: React.FC = () => {
 
         try {
             const chi_tiet = orderItems.map(it => ({ ma_san_pham: it.ma_san_pham, so_luong: it.so_luong, don_gia: it.don_gia }));
-            const payload: any = { ma_khach_hang: selectedCustomer, so_dien_thoai_nhan: recipientPhone || null, dia_chi_nhan: recipientAddress || null, thoi_gian_giao: deliveryTime || undefined, tong_tien: computeTotal(), chi_tiet };
+            const total = computeTotal();
+            let so_tien_giam_for_create = 0;
+            if (typeof addVoucherValue === 'number' && addVoucherValue > 0) {
+                if (addVoucherType === 'percent') {
+                    so_tien_giam_for_create = Math.round((total * (addVoucherValue / 100)) * 100) / 100;
+                } else {
+                    so_tien_giam_for_create = Number(addVoucherValue || 0);
+                }
+            }
+            const payload: any = { ma_khach_hang: selectedCustomer, so_dien_thoai_nhan: recipientPhone || null, dia_chi_nhan: recipientAddress || null, thoi_gian_giao: deliveryTime || undefined, tong_tien: total, chi_tiet, so_tien_giam: so_tien_giam_for_create };
             await orderAPI.create(payload);
             alert('Tạo đơn hàng thành công');
             setShowAddModal(false);
@@ -343,6 +356,7 @@ const Orders: React.FC = () => {
                                     <th className="p-4 font-medium">SĐT nhận</th>
                                     <th className="p-4 font-medium">Thời gian mua</th>
                                     <th className="p-4 font-medium">Tổng tiền</th>
+                                    <th className="p-4 font-medium">Tiền giảm</th>
                                     <th className="p-4 font-medium">Lãi</th>
                                     <th className="p-4 font-medium">Trạng thái</th>
                                     <th className="p-4 font-medium">Hành động</th>
@@ -357,6 +371,7 @@ const Orders: React.FC = () => {
                                         <td className="p-4 text-foreground">{o.so_dien_thoai_nhan || '-'}</td>
                                         <td className="p-4 text-foreground">{o.thoi_gian_mua}</td>
                                         <td className="p-4 text-foreground">{Number(o.tong_tien || 0).toLocaleString('vi-VN')}₫</td>
+                                        <td className="p-4 text-foreground">{Number(o.so_tien_giam || 0).toLocaleString('vi-VN')}₫</td>
                                         <td className="p-4 text-foreground">{Number(o.profit || 0).toLocaleString('vi-VN')}₫</td>
                                         <td className="p-4 text-foreground">
                                             {o.trang_thai === 'hoan_tat' ? (
@@ -415,6 +430,17 @@ const Orders: React.FC = () => {
                                                                 <label className="text-sm font-medium text-muted-foreground">Địa chỉ nhận</label>
                                 <input className={`w-full border border-input bg-background text-foreground px-3 py-2 rounded mt-1 focus:ring-2 focus:ring-black focus:outline-none ${orderFieldErrors.address ? 'border-red-500' : ''}`} value={recipientAddress} onChange={(e) => setRecipientAddress(e.target.value)} />
                                 {orderFieldErrors.address && <p className="text-red-600 text-xs mt-1">{orderFieldErrors.address}</p>}
+                            </div>
+                        </div>
+
+                        <div className="mb-4">
+                            <label className="text-sm font-medium text-muted-foreground">Voucher giảm giá</label>
+                            <div className="flex items-center gap-2 mt-1">
+                                <select value={addVoucherType} onChange={(e) => setAddVoucherType(e.target.value as any)} className="border border-input rounded px-2 py-1">
+                                    <option value="amount">Số tiền (VNĐ)</option>
+                                    <option value="percent">Phần trăm (%)</option>
+                                </select>
+                                <input type="number" min={0} value={addVoucherValue} onChange={(e) => setAddVoucherValue(Number(e.target.value))} className="w-40 border border-input rounded px-2 py-1" />
                             </div>
                         </div>
 
