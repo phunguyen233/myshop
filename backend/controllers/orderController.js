@@ -111,7 +111,14 @@ export const addOrder = async (req, res) => {
     // Chèn bản ghi vào `donhang` kèm thông tin người nhận
     // Đặt `trang_thai` mặc định là 'cho_xu_ly' để chắc chắn tạo đơn không gây trừ nguyên liệu
     // Nếu không cung cấp `thoi_gian_giao`, lưu NULL để cột hiển thị trống
-    const final_thoi_gian_giao = typeof thoi_gian_giao !== 'undefined' && thoi_gian_giao !== null ? thoi_gian_giao : null;
+    // DB requires `thoi_gian_giao` NOT NULL now — default to current datetime when not provided
+    const final_thoi_gian_giao = typeof thoi_gian_giao !== 'undefined' && thoi_gian_giao !== null
+      ? thoi_gian_giao
+      : (function() {
+          const d = new Date();
+          const pad = (n) => String(n).padStart(2, '0');
+          return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+        })();
     const final_tien_ship = typeof tien_ship !== 'undefined' && tien_ship !== null ? tien_ship : 0;
     const final_tien_dong_goi = typeof tien_dong_goi !== 'undefined' && tien_dong_goi !== null ? tien_dong_goi : 0;
     const final_so_tien_giam = typeof so_tien_giam !== 'undefined' && so_tien_giam !== null ? so_tien_giam : 0;
