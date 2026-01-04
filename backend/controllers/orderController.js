@@ -3,7 +3,7 @@ import db from "../config/db.js";
 export const getOrders = async (req, res) => {
   try {
     const [rows] = await db.query(
-      "SELECT d.ma_don_hang, d.ma_khach_hang, d.so_dien_thoai_nhan, d.dia_chi_nhan, d.tong_tien, d.trang_thai, d.tien_ship, d.tien_dong_goi, d.voucher_id, d.so_tien_giam, d.tinh_tu_dong, DATE_FORMAT(d.thoi_gian_mua, '%Y-%m-%d %H:%i:%s') as thoi_gian_mua, DATE_FORMAT(d.thoi_gian_giao, '%Y-%m-%d %H:%i:%s') as thoi_gian_giao, k.ho_ten as ten_khach_hang, k.so_dien_thoai as khach_so_dien_thoai FROM donhang d LEFT JOIN khachhang k ON d.ma_khach_hang = k.ma_khach_hang ORDER BY d.thoi_gian_mua DESC"
+      "SELECT d.ma_don_hang, d.ma_khach_hang, d.so_dien_thoai_nhan, d.dia_chi_nhan, d.tong_tien, d.trang_thai, d.tien_ship, d.tien_dong_goi, d.so_tien_giam, DATE_FORMAT(d.thoi_gian_mua, '%Y-%m-%d %H:%i:%s') as thoi_gian_mua, DATE_FORMAT(d.thoi_gian_giao, '%Y-%m-%d %H:%i:%s') as thoi_gian_giao, k.ho_ten as ten_khach_hang, k.so_dien_thoai as khach_so_dien_thoai FROM donhang d LEFT JOIN khachhang k ON d.ma_khach_hang = k.ma_khach_hang ORDER BY d.thoi_gian_mua DESC"
     );
 
     // compute profit for each order: product_total - ingredient_cost - tien_ship
@@ -47,8 +47,7 @@ export const getOrders = async (req, res) => {
       const tien_ship = Number(o.tien_ship || 0);
       const tien_dong_goi = Number(o.tien_dong_goi || 0);
       const so_tien_giam = Number(o.so_tien_giam || 0);
-      // prefer stored generated column `tinh_tu_dong` if available, otherwise compute
-      const total_after_discount = typeof o.tinh_tu_dong !== 'undefined' && o.tinh_tu_dong !== null ? Number(o.tinh_tu_dong) : (product_total - so_tien_giam);
+      const total_after_discount = product_total - so_tien_giam;
       const profit = product_total - so_tien_giam - ingredient_cost - tien_ship - tien_dong_goi;
       enhanced.push({ ...o, product_total, ingredient_cost, so_tien_giam, total_after_discount, profit });
     }
@@ -73,7 +72,6 @@ export const addOrder = async (req, res) => {
       tien_ship,
       tong_tien,
       chi_tiet,
-      voucher_id,
       so_tien_giam,
       tien_dong_goi
     } = req.body;
@@ -122,11 +120,9 @@ export const addOrder = async (req, res) => {
     const final_tien_ship = typeof tien_ship !== 'undefined' && tien_ship !== null ? tien_ship : 0;
     const final_tien_dong_goi = typeof tien_dong_goi !== 'undefined' && tien_dong_goi !== null ? tien_dong_goi : 0;
     const final_so_tien_giam = typeof so_tien_giam !== 'undefined' && so_tien_giam !== null ? so_tien_giam : 0;
-    const final_voucher_id = typeof voucher_id !== 'undefined' && voucher_id !== null ? voucher_id : null;
-
     const [order] = await db.query(
-      "INSERT INTO donhang (ma_khach_hang, so_dien_thoai_nhan, dia_chi_nhan, thoi_gian_giao, tong_tien, trang_thai, tien_ship, tien_dong_goi, voucher_id, so_tien_giam) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-      [final_ma_khach_hang, so_dien_thoai_nhan || null, dia_chi_nhan || null, final_thoi_gian_giao, tong_tien, 'cho_xu_ly', final_tien_ship, final_tien_dong_goi, final_voucher_id, final_so_tien_giam]
+      "INSERT INTO donhang (ma_khach_hang, so_dien_thoai_nhan, dia_chi_nhan, thoi_gian_giao, tong_tien, trang_thai, tien_ship, tien_dong_goi, so_tien_giam) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+      [final_ma_khach_hang, so_dien_thoai_nhan || null, dia_chi_nhan || null, final_thoi_gian_giao, tong_tien, 'cho_xu_ly', final_tien_ship, final_tien_dong_goi, final_so_tien_giam]
     );
     const ma_don_hang = order.insertId;
 
@@ -218,7 +214,7 @@ export const getOrderById = async (req, res) => {
   try {
     const { id } = req.params;
     const [[order]] = await db.query(
-      "SELECT d.ma_don_hang, d.ma_khach_hang, d.so_dien_thoai_nhan, d.dia_chi_nhan, d.tong_tien, d.trang_thai, d.tien_ship, d.tien_dong_goi, d.voucher_id, d.so_tien_giam, d.tinh_tu_dong, DATE_FORMAT(d.thoi_gian_mua, '%Y-%m-%d %H:%i:%s') as thoi_gian_mua, DATE_FORMAT(d.thoi_gian_giao, '%Y-%m-%d %H:%i:%s') as thoi_gian_giao, k.ho_ten as ten_khach_hang, k.so_dien_thoai as khach_so_dien_thoai FROM donhang d LEFT JOIN khachhang k ON d.ma_khach_hang = k.ma_khach_hang WHERE d.ma_don_hang = ?",
+      "SELECT d.ma_don_hang, d.ma_khach_hang, d.so_dien_thoai_nhan, d.dia_chi_nhan, d.tong_tien, d.trang_thai, d.tien_ship, d.tien_dong_goi, d.so_tien_giam, DATE_FORMAT(d.thoi_gian_mua, '%Y-%m-%d %H:%i:%s') as thoi_gian_mua, DATE_FORMAT(d.thoi_gian_giao, '%Y-%m-%d %H:%i:%s') as thoi_gian_giao, k.ho_ten as ten_khach_hang, k.so_dien_thoai as khach_so_dien_thoai FROM donhang d LEFT JOIN khachhang k ON d.ma_khach_hang = k.ma_khach_hang WHERE d.ma_don_hang = ?",
       [id]
     );
 
@@ -233,7 +229,7 @@ export const getOrderById = async (req, res) => {
     const [[pt2]] = await db.query("SELECT IFNULL(SUM(so_luong * don_gia),0) AS product_total FROM chitiet_donhang WHERE ma_don_hang = ?", [id]);
     const product_total = Number((pt2 && pt2.product_total) || 0);
     const so_tien_giam = Number(order.so_tien_giam || 0);
-    const total_after_discount = typeof order.tinh_tu_dong !== 'undefined' && order.tinh_tu_dong !== null ? Number(order.tinh_tu_dong) : (product_total - so_tien_giam);
+    const total_after_discount = product_total - so_tien_giam;
 
     res.json({ ...order, items, product_total, total_after_discount, so_tien_giam });
   } catch (err) {
@@ -248,7 +244,7 @@ export const searchOrders = async (req, res) => {
     if (!q) return res.json([]);
     const search = `%${q}%`;
     const [rows] = await db.query(
-      `SELECT d.ma_don_hang, d.ma_khach_hang, d.so_dien_thoai_nhan, d.dia_chi_nhan, d.tong_tien, d.trang_thai, d.tien_ship, d.tien_dong_goi, d.voucher_id, d.so_tien_giam, d.tinh_tu_dong, DATE_FORMAT(d.thoi_gian_mua, '%Y-%m-%d %H:%i:%s') as thoi_gian_mua, DATE_FORMAT(d.thoi_gian_giao, '%Y-%m-%d %H:%i:%s') as thoi_gian_giao
+      `SELECT d.ma_don_hang, d.ma_khach_hang, d.so_dien_thoai_nhan, d.dia_chi_nhan, d.tong_tien, d.trang_thai, d.tien_ship, d.tien_dong_goi, d.so_tien_giam, DATE_FORMAT(d.thoi_gian_mua, '%Y-%m-%d %H:%i:%s') as thoi_gian_mua, DATE_FORMAT(d.thoi_gian_giao, '%Y-%m-%d %H:%i:%s') as thoi_gian_giao
        FROM donhang d
        LEFT JOIN khachhang k ON d.ma_khach_hang = k.ma_khach_hang
        LEFT JOIN chitiet_donhang c ON c.ma_don_hang = d.ma_don_hang
@@ -268,7 +264,7 @@ export const searchOrders = async (req, res) => {
 export const updateOrderStatus = async (req, res) => {
   try {
     const { id } = req.params;
-    const { trang_thai, tien_ship, packaged_items, voucher_id, voucher_type, voucher_value, so_tien_giam: so_tien_giam_from_body } = req.body;
+    const { trang_thai, tien_ship, packaged_items, voucher_type, voucher_value, so_tien_giam: so_tien_giam_from_body } = req.body;
     if (!trang_thai) return res.status(400).json({ message: "Thiếu trạng thái" });
 
     // Kiểm tra giá trị trạng thái có hợp lệ so với enum trong schema
@@ -525,9 +521,7 @@ export const updateOrderStatus = async (req, res) => {
       if (typeof so_tien_giam_val !== 'undefined' && so_tien_giam_val > 0) {
         updates.push('so_tien_giam = ?'); params.push(so_tien_giam_val);
       }
-      if (typeof voucher_id !== 'undefined' && voucher_id !== null) {
-        updates.push('voucher_id = ?'); params.push(voucher_id);
-      }
+      // note: `donhang` schema no longer contains `voucher_id` column
       params.push(id);
       const sql = `UPDATE donhang SET ${updates.join(', ')} WHERE ma_don_hang = ?`;
       await connection.query(sql, params);
@@ -536,7 +530,7 @@ export const updateOrderStatus = async (req, res) => {
 
       // fetch updated order
       const [[order]] = await db.query(
-        "SELECT d.ma_don_hang, d.ma_khach_hang, d.so_dien_thoai_nhan, d.dia_chi_nhan, d.tong_tien, d.trang_thai, d.tien_ship, d.tien_dong_goi, d.voucher_id, d.so_tien_giam, d.tinh_tu_dong, DATE_FORMAT(d.thoi_gian_mua, '%Y-%m-%d %H:%i:%s') as thoi_gian_mua, DATE_FORMAT(d.thoi_gian_giao, '%Y-%m-%d %H:%i:%s') as thoi_gian_giao, k.ho_ten as ten_khach_hang, k.so_dien_thoai as khach_so_dien_thoai FROM donhang d LEFT JOIN khachhang k ON d.ma_khach_hang = k.ma_khach_hang WHERE d.ma_don_hang = ?",
+        "SELECT d.ma_don_hang, d.ma_khach_hang, d.so_dien_thoai_nhan, d.dia_chi_nhan, d.tong_tien, d.trang_thai, d.tien_ship, d.tien_dong_goi, d.so_tien_giam, DATE_FORMAT(d.thoi_gian_mua, '%Y-%m-%d %H:%i:%s') as thoi_gian_mua, DATE_FORMAT(d.thoi_gian_giao, '%Y-%m-%d %H:%i:%s') as thoi_gian_giao, k.ho_ten as ten_khach_hang, k.so_dien_thoai as khach_so_dien_thoai FROM donhang d LEFT JOIN khachhang k ON d.ma_khach_hang = k.ma_khach_hang WHERE d.ma_don_hang = ?",
         [id]
       );
 
@@ -587,7 +581,7 @@ export const updateOrderStatus = async (req, res) => {
       const tien_ship_val = typeof tien_ship !== 'undefined' && tien_ship !== null ? Number(tien_ship) : Number(order.tien_ship || 0);
       const so_tien_giam_val_from_order = Number(order.so_tien_giam || 0);
       const so_tien_giam_effective = so_tien_giam_val_from_order || so_tien_giam_val || 0;
-      const total_after_discount = typeof order.tinh_tu_dong !== 'undefined' && order.tinh_tu_dong !== null ? Number(order.tinh_tu_dong) : (product_total - so_tien_giam_effective);
+      const total_after_discount = product_total - so_tien_giam_effective;
       const profit = product_total - so_tien_giam_effective - ingredient_cost - tien_ship_val - packaged_total;
 
       // include deductions if any, plus packaged_total, discount and profit

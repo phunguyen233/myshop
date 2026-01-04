@@ -239,7 +239,9 @@ const Orders: React.FC = () => {
                 return;
             }
 
-            const resp: any = await orderAPI.updateStatus(detail.ma_don_hang, newStatus, shipFee ?? undefined, packagedItems.length ? packagedItems : undefined, voucherType, voucherValue);
+            // ensure tien_ship is always sent (default 0 when empty)
+            const tienShipToSend = (typeof shipFee === 'number' && !isNaN(shipFee)) ? shipFee : 0;
+            const resp: any = await orderAPI.updateStatus(detail.ma_don_hang, newStatus, tienShipToSend, packagedItems.length ? packagedItems : undefined, voucherType, voucherValue);
             alert(resp?.message || 'Cập nhật trạng thái thành công');
             // refresh list and detail
             fetchOrders();
@@ -355,6 +357,7 @@ const Orders: React.FC = () => {
                                     <th className="p-4 font-medium">Thời gian giao</th>
                                     <th className="p-4 font-medium">SĐT nhận</th>
                                     <th className="p-4 font-medium">Thời gian mua</th>
+                                    <th className="p-4 font-medium">Địa chỉ</th>
                                     <th className="p-4 font-medium">Tổng tiền</th>
                                     <th className="p-4 font-medium">Tiền giảm</th>
                                     <th className="p-4 font-medium">Lãi</th>
@@ -370,7 +373,8 @@ const Orders: React.FC = () => {
                                         <td className="p-4 text-foreground">{o.thoi_gian_giao || ''}</td>
                                         <td className="p-4 text-foreground">{o.so_dien_thoai_nhan || '-'}</td>
                                         <td className="p-4 text-foreground">{o.thoi_gian_mua}</td>
-                                        <td className="p-4 text-foreground">{Number(o.tong_tien || 0).toLocaleString('vi-VN')}₫</td>
+                                        <td className="p-4 text-foreground max-w-xs truncate">{o.dia_chi_nhan || o.dia_chi || '-'}</td>
+                                        <td className="p-4 text-foreground">{Number(o.product_total || 0).toLocaleString('vi-VN')}₫</td>
                                         <td className="p-4 text-foreground">{Number(o.so_tien_giam || 0).toLocaleString('vi-VN')}₫</td>
                                         <td className="p-4 text-foreground">{Number(o.profit || 0).toLocaleString('vi-VN')}₫</td>
                                         <td className="p-4 text-foreground">
