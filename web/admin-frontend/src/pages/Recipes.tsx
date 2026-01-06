@@ -18,6 +18,7 @@ const Recipes: React.FC = () => {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [modalRows, setModalRows] = useState<Array<{ ma_nguyen_lieu:number, so_luong_can:number, don_vi_id:number }>>([]);
   const [modalSelectedProduct, setModalSelectedProduct] = useState<number | null>(null);
+  const [isEditMode, setIsEditMode] = useState(false);
   const [ingredientQuery, setIngredientQuery] = useState("");
   const [showReceiptModal, setShowReceiptModal] = useState(false);
   const [receiptForm, setReceiptForm] = useState({ ma_nguyen_lieu: 0, so_luong_nhap: 0, don_vi_id: 0, don_gia: 0 });
@@ -75,12 +76,13 @@ const Recipes: React.FC = () => {
   const handleEditRecipe = async (productId:number) => {
     try {
       const data = await recipeAPI.getByProduct(productId);
-      // build rows from returned items
+      // build modal rows from returned items
       const newRows = (data || []).map((it:any) => ({ ma_nguyen_lieu: it.ma_nguyen_lieu, so_luong_can: it.so_luong_can, don_vi_id: it.don_vi_id }));
-      setRows(newRows);
-      setSelectedProduct(productId);
+      setModalRows(newRows);
+      setModalSelectedProduct(productId);
       setEditingProduct(productId);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      setIsEditMode(true);
+      setShowCreateModal(true);
     } catch (e) {
       console.error(e);
       alert('Không thể tải công thức để sửa');
@@ -177,22 +179,34 @@ const Recipes: React.FC = () => {
 
   const saveModalRecipe = async () => {
     if (!modalSelectedProduct) return alert('Chọn sản phẩm trước khi lưu');
-    const items = modalRows.filter(r=>r.ma_nguyen_lieu && r.so_luong_can>0).map(r=>({
-      ...r,
-      cost_per_line: Math.round((computeLineCost(r) || 0))
-    }));
-    const total = items.reduce((s:number,it:any)=>s + (Number(it.cost_per_line)||0),0);
+    const items = modalRows
+      .filter(r => r.ma_nguyen_lieu && Number(r.so_luong_can) > 0)
+      .map(r => ({
+        ma_nguyen_lieu: Number(r.ma_nguyen_lieu),
+        so_luong_can: Number(r.so_luong_can),
+        // send null for unspecified unit so DB can accept default
+        don_vi_id: r.don_vi_id ? Number(r.don_vi_id) : null,
+        cost_per_line: Math.round((computeLineCost(r) || 0))
+      }));
+
+    if (items.length === 0) return alert('Phải có ít nhất một nguyên liệu với số lượng > 0');
+
     const payload = { ma_san_pham: modalSelectedProduct, items };
     try {
-      await recipeAPI.create(payload);
-      alert('Tạo công thức thành công');
+      const res = await recipeAPI.create(payload);
+      const msg = isEditMode ? 'Cập nhật công thức thành công' : 'Tạo công thức thành công';
+      if (res && res.message) alert(`${msg}: ${res.message}`);
+      else alert(msg);
       setShowCreateModal(false);
       setModalRows([]);
       setModalSelectedProduct(null);
+      setIsEditMode(false);
+      setEditingProduct(null);
       await loadSaved();
-    } catch (e) {
-      console.error(e);
-      alert('Lỗi khi tạo công thức');
+    } catch (err:any) {
+      console.error('Save recipe error', err);
+      const serverMsg = err?.response?.data?.message || err?.message || 'Lỗi khi lưu công thức';
+      alert(serverMsg);
     }
   };
 
@@ -212,7 +226,7 @@ const Recipes: React.FC = () => {
             <button onClick={() => {}} className="bg-gray-200 text-gray-800 hover:bg-gray-300 px-3 py-2 rounded-lg">Tìm</button>
           </div>
           <div>
-            <button onClick={() => { setShowCreateModal(true); setModalRows([]); setModalSelectedProduct(null); }} className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-semibold">Tạo công thức</button>
+            <button onClick={() => { setShowCreateModal(true); setModalRows([]); setModalSelectedProduct(null); setIsEditMode(false); setEditingProduct(null); }} className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-semibold">Tạo công thức</button>
           </div>
         </div>
 
@@ -299,9 +313,9 @@ const Recipes: React.FC = () => {
         {showCreateModal && (
           <div className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 p-6">
             <div className="bg-card text-card-foreground rounded-lg p-6 max-w-2xl w-full shadow-xl border border-border">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-xl font-bold">Tạo công thức mới</h3>
-                <button onClick={() => setShowCreateModal(false)} className="text-muted-foreground">Đóng</button>
+                <div className="flex items-center justify-between mb-4">
+                <h3 className="text-xl font-bold">{isEditMode ? 'Sửa công thức' : 'Tạo công thức mới'}</h3>
+                <button onClick={() => { setShowCreateModal(false); setIsEditMode(false); setEditingProduct(null); setModalRows([]); }} className="text-muted-foreground">Đóng</button>
               </div>
               <div className="mb-3">
                 <label className="block text-sm mb-1">Chọn sản phẩm</label>
@@ -345,7 +359,7 @@ const Recipes: React.FC = () => {
               </div>
 
               <div className="flex justify-end gap-2">
-                <button onClick={() => setShowCreateModal(false)} className="bg-gray-300 px-3 py-2 rounded">Hủy</button>
+                <button onClick={() => { setShowCreateModal(false); setIsEditMode(false); setEditingProduct(null); setModalRows([]); }} className="bg-gray-300 px-3 py-2 rounded">Hủy</button>
                 <button onClick={saveModalRecipe} className="bg-green-600 text-white px-4 py-2 rounded">Lưu</button>
               </div>
             </div>
